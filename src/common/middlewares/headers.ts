@@ -10,7 +10,7 @@ export class HeadersMiddeware implements NestMiddleware {
         if (!date) throw new UnauthorizedException('Missing authorization headers');
 
         req['date'] = date;
-        req['username'] = user;
+        req['username'] = 'S9107544';
         next();
     }
 }

@@ -3,7 +3,7 @@ import { Material } from "../material/material.model";
 
 export type IMaterialNickname = { materialId: string; nickname?: string | null };
 
-@Table({ tableName: "material_nickname", timestamps: false })
+@Table({ tableName: "materials_nicknames", timestamps: false })
 export class MaterialNickname extends Model<IMaterialNickname> {
   @PrimaryKey
   @ForeignKey(() => Material)

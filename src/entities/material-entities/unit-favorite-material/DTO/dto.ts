@@ -2,9 +2,8 @@ import { Type } from "class-transformer";
 import { IsInt, IsString, Length, Min } from "class-validator";
 
 export class CreateUnitFavoriteMaterial {
-    @Type(() => Number)
     @IsInt()
-    @Min(1)
+    @Min(0)
     unitId: number;
 
     @IsString()

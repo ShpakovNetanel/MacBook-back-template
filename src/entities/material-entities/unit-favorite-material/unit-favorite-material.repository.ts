@@ -7,8 +7,12 @@ import { CreateUnitFavoriteMaterial, DeleteUnitFavoriteMaterial } from "./DTO/dt
 export class UnitFavoriteMaterialRepository {
     constructor(@InjectModel(UnitFavoriteMaterial) private readonly unitFavoriteMaterialModel: typeof UnitFavoriteMaterial) { }
 
-    create(unitFavoriteMaterial: CreateUnitFavoriteMaterial) {
-        return this.unitFavoriteMaterialModel.create(unitFavoriteMaterial);
+    async create(unitFavoriteMaterial: CreateUnitFavoriteMaterial) {
+        try {
+            return await this.unitFavoriteMaterialModel.create(unitFavoriteMaterial);
+        } catch (error) {
+            console.log(error);
+        }
     }
 
     destroy(unitFavoriteMaterial: DeleteUnitFavoriteMaterial) {

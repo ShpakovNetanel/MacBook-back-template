@@ -13,6 +13,7 @@ type ResponseShape<T> = {
   body: {
     data: T;
     message: string;
+    type?: unknown;
   };
 };
 
@@ -41,6 +42,18 @@ const splitMessageAndData = (
   return { data: asRecord.data, message };
 };
 
+const splitMessageAndType = (
+  value: unknown
+): { data: null; message: string; type: unknown } | null => {
+  if (!value || typeof value !== "object") return null;
+  const asRecord = value as Record<string, unknown>;
+  if (!("message" in asRecord) || !("type" in asRecord)) return null;
+  if ("data" in asRecord) return null;
+  const message = asRecord.message;
+  if (typeof message !== "string") return null;
+  return { data: null, message, type: asRecord.type };
+};
+
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -49,12 +62,14 @@ export class ResponseInterceptor implements NestInterceptor {
       map((data) => {
         if (isResponseShape(data)) return data;
         const split = splitMessageAndData(data);
+        const splitType = split ? null : splitMessageAndType(data);
         return {
           success: true,
           statusCode: httpResponse?.statusCode ?? 200,
           body: {
-            data: split ? split.data : data,
-            message: split?.message ?? "OK",
+            data: split ? split.data : splitType ? splitType.data : data,
+            message: split?.message ?? splitType?.message ?? "OK",
+            ...(splitType ? { type: splitType.type } : {}),
           },
         };
       })
