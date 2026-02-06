@@ -5,7 +5,7 @@ export type ICategory = { id: string; description?: string | null };
 
 @Table({ tableName: "main_categories", timestamps: false })
 export class MainCategory extends Model<ICategory> {
-  @PrimaryKey @Column(DataType.STRING(3)) declare id: string;
+  @PrimaryKey @Column(DataType.STRING(3)) declare id: string
   @Column(DataType.STRING(40)) declare description: string | null;
   @HasMany(() => MaterialCategory) declare materialCategories?: MaterialCategory[];
 }
