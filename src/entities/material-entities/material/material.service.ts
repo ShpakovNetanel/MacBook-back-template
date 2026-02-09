@@ -8,6 +8,7 @@ export class MaterialService {
     async fetchTwenty(filter: string, unitId: number) {
         const { materials, comments } = await this.repository.fetchAll(filter, unitId);
         const commentByMaterial = new Map<string, string>();
+        
         for (const comment of comments) {
             if (!commentByMaterial.has(comment.materialId)) {
                 commentByMaterial.set(comment.materialId, comment.text ?? "");

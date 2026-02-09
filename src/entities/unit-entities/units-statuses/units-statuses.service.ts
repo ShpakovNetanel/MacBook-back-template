@@ -6,13 +6,22 @@ import { UpdateUnitStatus } from "./DTO/updateUnitStatus";
 export class UnitStatusTypesService {
     constructor(private readonly repository: UnitStatusTypesRepository) { }
 
-    updateStatuses(unitsStatuses: UpdateUnitStatus, date: string) {
+    async updateHierarchyStatuses(unitsStatuses: UpdateUnitStatus, date: string) {
         try {
-            return this.repository.updateStatuses(unitsStatuses.unitsIds.map(unitId => ({
-                unitId,
-                unitStatusId: unitsStatuses.statusId,
-                date: new Date(date)
-            })));
+            const hierarchyUnitIds = await this.repository.fetchHierarchyUnitIds(date, unitsStatuses.unitsIds);
+            const statusesToSave = unitsStatuses.updateHierarchy
+                ? hierarchyUnitIds.map(unitId => ({
+                    unitId,
+                    unitStatusId: unitsStatuses.statusId,
+                    date: new Date(date)
+                }))
+                : unitsStatuses.unitsIds.map(unitId => ({
+                    unitId,
+                    unitStatusId: unitsStatuses.statusId,
+                    date: new Date(date)
+                }));
+
+            return this.repository.updateStatuses(statusesToSave);
         } catch (error) {
             console.log(error);
         }

@@ -7,8 +7,8 @@ export class UnitStatusTypesController {
     constructor(private readonly service: UnitStatusTypesService) { }
 
     @Post('')
-    updateStatuses(@Body() unitsStatuses: UpdateUnitStatus,
+    updateHierarchyStatuses(@Body() unitsStatuses: UpdateUnitStatus,
         @Req() request) {
-        return this.service.updateStatuses(unitsStatuses, request?.['date']);
+        return this.service.updateHierarchyStatuses(unitsStatuses, request?.['date']);
     }
 }
