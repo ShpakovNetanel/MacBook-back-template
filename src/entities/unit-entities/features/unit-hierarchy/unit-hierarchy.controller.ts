@@ -25,10 +25,12 @@ export class UnitHierarchyController {
     @Req() request: Request
   ) {
     const headerUnit = Number(request.headers["unit"]);
+    const reporterUnitId = Number.isNaN(headerUnit) ? null : headerUnit;
 
     return this.service.addUnitRelation(
       addUnitRelationDto,
       request?.["date"],
+      reporterUnitId,
       request?.["username"]
     );
   }
@@ -38,7 +40,9 @@ export class UnitHierarchyController {
     @Body() removeUnitRelationDto: RemoveUnitRelationDto,
     @Req() request: Request
   ) {
-    return this.service.removeUnitRelation(removeUnitRelationDto, request?.["date"]);
+    const headerUnit = Number(request.headers["unit"]);
+    const screenUnitId = Number.isNaN(headerUnit) ? null : headerUnit;
+    return this.service.removeUnitRelation(removeUnitRelationDto, request?.["date"], screenUnitId);
   }
 
   @Put("hierarchy")
@@ -49,6 +53,7 @@ export class UnitHierarchyController {
     return this.service.transferUnitRelation(
       transferUnitRelationDto,
       request?.["date"],
+      Number(request.headers["unit"]),
       request?.["username"]
     );
   }

@@ -7,8 +7,7 @@ export type SaveReportsBody = {
         materialId: string,
         type: number,
         unitId: number,
-        quantity: number;
-        status: string;
+        quantity: number
     }[],
     children: number[]
 }

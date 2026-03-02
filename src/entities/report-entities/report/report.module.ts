@@ -37,7 +37,7 @@ import { ReportService } from "./report.service";
         UnitHierarchyModule],
     controllers: [ReportController],
     providers: [ReportService, ReportRepository],
-    exports: [ReportService],
+    exports: [ReportService, ReportRepository],
 })
 
 export class ReportModule { }

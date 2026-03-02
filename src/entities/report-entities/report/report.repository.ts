@@ -3,20 +3,16 @@ import { InjectModel } from "@nestjs/sequelize";
 import { isEmpty } from "remeda";
 import { col, Op, where } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
-import { RECORD_STATUS, REPORT_TYPES, UNIT_RELATION_TYPES, UNIT_STATUSES } from "src/contants";
+import { RECORD_STATUS, REPORT_TYPES, UNIT_RELATION_TYPES } from "src/contants";
 import { MainCategory } from "src/entities/material-entities/categories/categories.model";
 import { MaterialCategory } from "src/entities/material-entities/material-category/material-category.model";
 import { MaterialNickname } from "src/entities/material-entities/material-nickname/material-nickname.model";
 import { Material } from "src/entities/material-entities/material/material.model";
-import { UnitFavoriteMaterial } from "src/entities/material-entities/unit-favorite-material/unit-favorite-material.model";
 import { UnitRelation } from "src/entities/unit-entities/unit-relations/unit-relation.model";
 import { IReportItem, ReportItem } from "../report-item/report-item.model";
 import { Stock } from "../stock/stock.model";
 import { IReport, Report } from "./report.model";
 import { ReportChanges } from "./report.types";
-import { UnitId } from "src/entities/unit-entities/unit-id/unit-id.model";
-import { Unit } from "src/entities/unit-entities/unit/unit.model";
-import { UnitStatus } from "src/entities/unit-entities/units-statuses/units-statuses.model";
 
 @Injectable()
 export class ReportRepository {
@@ -24,7 +20,6 @@ export class ReportRepository {
 
     constructor(@InjectModel(Report) private readonly reportModel: typeof Report,
         @InjectModel(ReportItem) private readonly reportItemModel: typeof ReportItem,
-        @InjectModel(UnitFavoriteMaterial) private readonly unitFavoriteMaterialModel: typeof UnitFavoriteMaterial,
         @InjectModel(UnitRelation) private readonly unitRelationModel: typeof UnitRelation,
         @InjectModel(Stock) private readonly stockModel: typeof Stock) { }
 
@@ -59,6 +54,10 @@ export class ReportRepository {
                 type: 'Failure'
             })
         }
+    }
+
+    upsertReports(reportChanges: ReportChanges): Promise<void> {
+        return this.saveReports(reportChanges);
     }
 
     async fetchParentUnits(date: Date, childUnitIds: number[]): Promise<Map<number, number>> {
@@ -96,30 +95,18 @@ export class ReportRepository {
         while (units.length > 0) {
             const relations = await this.unitRelationModel.findAll({
                 attributes: ["unitId", "relatedUnitId"],
-                include: [{
-                    model: UnitId,
-                    as: "relatedUnit",
-                    required: true,
-                    include: [{
-                        model: UnitStatus,
-                        required: true,
-                        where: {
-                            unitStatusId: { [Op.ne]: UNIT_STATUSES.REQUESTING },
-                        },
-                    }]
-                }],
                 where: {
                     unitRelationId: UNIT_RELATION_TYPES.ZRA,
                     unitId: { [Op.in]: units },
                     startDate: { [Op.lte]: date },
                     endDate: { [Op.gt]: date }
-                },
+                }
             });
+
             const next: number[] = [];
 
             for (const relation of relations) {
                 const childId = relation.relatedUnitId;
-
                 if (!visited.has(childId)) {
                     visited.add(childId);
                     parentByChild.set(childId, relation.unitId);
@@ -139,61 +126,17 @@ export class ReportRepository {
         recipientUnitId: number,
         material: string | undefined = ''
     ): Promise<Report[]> {
-        const { descendantIds, unitIds } = await this.buildReportScope(date, recipientUnitId);
-        return this.fetchReportsByScope({
-            date,
-            descendantIds,
-            unitIds,
-            material,
-            itemStatuses: [RECORD_STATUS.ACTIVE, RECORD_STATUS.INACTIVE]
-        });
-    }
+        const { descendantIds } = await this.fetchDescendantUnits(new Date(date), recipientUnitId);
+        const unitIds = [recipientUnitId, ...descendantIds];
 
-    async fetchFavoriteReportsData(
-        date: string,
-        recipientUnitId: number
-    ): Promise<Report[]> {
-        const favorites = await this.unitFavoriteMaterialModel.findAll({
-            attributes: ["materialId"],
-            where: { unitId: recipientUnitId }
-        });
-        const favoriteMaterialIds = Array.from(new Set(favorites.map((favorite) => favorite.materialId)));
-        if (favoriteMaterialIds.length === 0) return [];
-
-        const { descendantIds, unitIds } = await this.buildReportScope(date, recipientUnitId);
-        return this.fetchReportsByScope({
-            date,
-            descendantIds,
-            unitIds,
-            itemStatuses: [RECORD_STATUS.ACTIVE, RECORD_STATUS.INACTIVE],
-            materialIds: favoriteMaterialIds
-        });
-    }
-
-    async fetchMostRecentReportsData(
-        date: string,
-        recipientUnitId: number
-    ): Promise<Report[]> {
-        const { descendantIds, unitIds } = await this.buildReportScope(date, recipientUnitId);
-        if (descendantIds.length === 0) return [];
-
-        const latestCreatedOn = await this.reportModel.max("createdOn", {
+        return this.reportModel.findAll({
             where: {
                 unitId: { [Op.in]: descendantIds },
                 recipientUnitId: { [Op.in]: unitIds },
-                createdOn: { [Op.lte]: date },
+                createdOn: date,
                 reportTypeId: { [Op.in]: [REPORT_TYPES.REQUEST, REPORT_TYPES.INVENTORY, REPORT_TYPES.USAGE] }
-            }
-        });
-
-        const latestDate = this.toDateOnly(latestCreatedOn);
-        if (!latestDate) return [];
-
-        return this.fetchReportsByScope({
-            date: latestDate,
-            descendantIds,
-            unitIds,
-            itemStatuses: [RECORD_STATUS.ACTIVE, RECORD_STATUS.INACTIVE]
+            },
+            include: this.buildReportsInclude(date, material),
         });
     }
 
@@ -214,71 +157,7 @@ export class ReportRepository {
         });
     }
 
-    private async buildReportScope(date: string, recipientUnitId: number) {
-        const { descendantIds } = await this.fetchDescendantUnits(new Date(date), recipientUnitId);
-        return {
-            descendantIds,
-            unitIds: [recipientUnitId, ...descendantIds]
-        };
-    }
-
-    private fetchReportsByScope({
-        date,
-        descendantIds,
-        unitIds,
-        material = '',
-        itemStatuses = [RECORD_STATUS.ACTIVE],
-        materialIds
-    }: {
-        date: string;
-        descendantIds: number[];
-        unitIds: number[];
-        material?: string;
-        itemStatuses?: string[];
-        materialIds?: string[];
-    }): Promise<Report[]> {
-        if (descendantIds.length === 0) return Promise.resolve([]);
-
-        return this.reportModel.findAll({
-            where: {
-                unitId: { [Op.in]: descendantIds },
-                recipientUnitId: { [Op.in]: unitIds },
-                createdOn: date,
-                reportTypeId: { [Op.in]: [REPORT_TYPES.REQUEST, REPORT_TYPES.INVENTORY, REPORT_TYPES.USAGE] }
-            },
-            include: this.buildReportsInclude(
-                date,
-                material,
-                itemStatuses,
-                materialIds
-            ),
-        });
-    }
-
-    private toDateOnly(value: unknown): string | null {
-        if (!value) return null;
-        if (value instanceof Date) {
-            const year = value.getFullYear();
-            const month = `${value.getMonth() + 1}`.padStart(2, "0");
-            const day = `${value.getDate()}`.padStart(2, "0");
-            return `${year}-${month}-${day}`;
-        }
-
-        const dateAsString = String(value);
-        if (dateAsString.length < 10) return null;
-        return dateAsString.slice(0, 10);
-    }
-
-    private buildReportsInclude(
-        date: string,
-        material: string | undefined = '',
-        itemStatuses: string[] = [RECORD_STATUS.ACTIVE],
-        materialIds: string[] = []
-    ) {
-        const materialFilter = materialIds.length > 0
-            ? { [Op.in]: materialIds }
-            : { [Op.iLike]: `%${material}%` };
-
+    private buildReportsInclude(date: string, material: string | undefined = '') {
         return [{
             association: "unit",
             required: false,
@@ -343,8 +222,18 @@ export class ReportRepository {
                             where(col("items->material->comments.date"), Op.eq, col("Report.created_on")),
                             {
                                 [Op.or]: [
-                                    where(col("items->material->comments.unit_id"), Op.eq, col("Report.unit_id")),
-                                    where(col("items->material->comments.unit_id"), Op.eq, col("Report.recipient_unit_id")),
+                                    {
+                                        [Op.and]: [
+                                            where(col("items->material->comments.unit_id"), Op.eq, col("Report.unit_id")),
+                                            where(col("items->material->comments.recipient_unit_id"), Op.eq, col("Report.recipient_unit_id")),
+                                        ],
+                                    },
+                                    {
+                                        [Op.and]: [
+                                            where(col("items->material->comments.unit_id"), Op.eq, col("Report.recipient_unit_id")),
+                                            where(col("items->material->comments.recipient_unit_id"), Op.eq, col("Report.unit_id")),
+                                        ],
+                                    }
                                 ]
                             }
                         ]
@@ -365,14 +254,14 @@ export class ReportRepository {
                 }],
             }],
             where: {
-                materialId: materialFilter,
+                materialId: { [Op.iLike]: `%${material}%` },
                 modifiedAt: {
                     [Op.eq]: Sequelize.literal(`(SELECT MAX("report_items"."modified_at")
                                               FROM "report_items"
                                              WHERE "report_items"."report_id" = "Report"."id"
                                                AND "report_items"."material_id" = "items"."material_id" )`)
                 },
-                status: { [Op.in]: itemStatuses }
+                status: RECORD_STATUS.ACTIVE
             }
         }];
     }

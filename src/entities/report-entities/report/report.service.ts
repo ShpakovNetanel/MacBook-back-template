@@ -10,7 +10,6 @@ import { formatDate } from "src/utils/date";
 import { ReportRepository } from "./report.repository";
 import {
     AggregateReportsDTO,
-    MaterialDto,
     ReportDto,
     SaveReportsBody,
 } from "./report.types";
@@ -24,7 +23,7 @@ import {
     getAggregatedReports,
     sortNumeric,
 } from "./utilities/report-aggregate-hierarchy.utils";
-import { buildReportsMaterialsResponse, buildReportsResponse } from "./utilities/report-fetch.utils";
+import { buildReportsResponse } from "./utilities/report-fetch.utils";
 import { buildReportsToSave } from "./utilities/report-save.utils";
 
 @Injectable()
@@ -73,10 +72,11 @@ export class ReportService {
                 createdOn: date,
                 createdAt: formattedTime,
                 createdBy: username,
+                recordStatus: RECORD_STATUS.ACTIVE,
                 parentByChild
             });
 
-            await this.repository.saveReports({
+            await this.repository.upsertReports({
                 reportsToSave,
                 transaction,
             });
@@ -99,43 +99,10 @@ export class ReportService {
 
     async fetchReports(date: string, recipientUnitId: number): Promise<ReportDto[]> {
         const reports = await this.repository.fetchReportsData(date, recipientUnitId);
-
         return buildReportsResponse({
             recipientUnitId,
             reports,
         });
-    }
-
-    async fetchFavoriteReports(date: string, recipientUnitId: number): Promise<ReportDto[]> {
-        const reports = await this.repository.fetchFavoriteReportsData(date, recipientUnitId);
-
-        return buildReportsResponse({
-            recipientUnitId,
-            reports,
-        });
-    }
-
-    async fetchMostRecentMaterials(date: string, recipientUnitId: number) {
-        try {
-
-            const reports = await this.repository.fetchMostRecentReportsData(date, recipientUnitId);
-
-            return {
-                data: buildReportsMaterialsResponse({
-                    recipientUnitId,
-                    reports,
-                }),
-                message: 'הבאת המק״טים צלחה',
-                type: MESSAGE_TYPES.SUCCESS
-            };
-        } catch (error) {
-            console.log(error);
-
-            throw new BadGatewayException({
-                message: 'נכשלה הבאת המק״טים מועדה אחרונה',
-                type: MESSAGE_TYPES.FAILURE
-            });
-        }
     }
 
     async aggregateHierarchy(
@@ -163,7 +130,7 @@ export class ReportService {
             assertLowerHierarchyStable(aggregatedReportsDTO.lowerUnitsIds ?? [], lowerUnitsIds);
 
             const resolveUnit = buildUnitResolver(unitsById, emergencyUnitLookup);
-
+            
             const unitsMap = buildUnitsMap(connectedUnitIds, screenUnitId, parentsByChild, resolveUnit);
             const childrenByParentMap = buildChildrenByParentMap(
                 childrenByParent,
@@ -186,13 +153,13 @@ export class ReportService {
                 username: user
             });
 
-            await this.repository.saveReports({
+            await this.repository.upsertReports({
                 reportsToSave: reportsToSave ?? [],
                 transaction
             });
 
             await transaction.commit();
-
+            
             return {
                 message: 'ההירככיה ננעלה בהצלחה',
                 type: MESSAGE_TYPES.SUCCESS,

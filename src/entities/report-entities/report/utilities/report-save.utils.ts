@@ -8,6 +8,7 @@ type BuildReportsParams = {
     createdOn: Date;
     createdAt: string;
     createdBy: string;
+    recordStatus: string;
     parentByChild: Map<number, number>;
 };
 
@@ -19,6 +20,7 @@ export const buildReportsToSave = ({
     createdOn,
     createdAt,
     createdBy,
+    recordStatus,
     parentByChild
 }: BuildReportsParams): IReportsChanges[] => {
     const reportsByKey = new Map<string, IReportsChanges>();
@@ -50,7 +52,7 @@ export const buildReportsToSave = ({
             reportingLevel,
             reportingUnitId,
             confirmedQuantity: change.quantity,
-            status: change.status,
+            status: recordStatus,
             changedAt: createdAt,
             changedBy,
             modifiedAt: createdOn

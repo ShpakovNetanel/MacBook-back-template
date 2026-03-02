@@ -3,10 +3,10 @@ import { isDefined, isEmptyish } from "remeda";
 import { MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS, UNIT_STATUSES } from "src/contants";
 import { UnitRelation } from "src/entities/unit-entities/unit-relations/unit-relation.model";
 import { formatDate } from "src/utils/date";
-import { IReportItem } from "../../report-item/report-item.model";
-import { Report } from "../report.model";
+import { IReport, Report } from "../report.model";
 import { AggregatedMaterials, AggregateUnitDto, IReportsChanges, UnitDto, UnitStatusDto } from "../report.types";
 import { hasHierarchyChanged } from "./report-common.utils";
+import { IReportItem } from "../../report-item/report-item.model";
 
 export const DEFAULT_STATUS: UnitStatusDto = {
     id: 0,
@@ -304,8 +304,6 @@ const upsertReports = (
     aggregatedMaterials: AggregatedMaterials[],
     username: string
 ) => {
-    if(!aggregatedMaterials.length) return;
-    
     const reportKey = `${unitId}::${parentUnit.id}::${reportType}`;
     const { formattedTime } = formatDate(new Date());
 
@@ -388,16 +386,13 @@ const calculateReports = async (
     let aggregatedMaterials: AggregatedMaterials[] = [];
 
     try {
-        const parentUnit = unitsMap[currentUnit.parent?.id ?? -1];
-        const unitReports = hierarchyReportsIndex.getUnitReports(currentUnit.id);
-        const unitReport = unitReports.find((report) => report.reportTypeId === reportType &&
-            report.recipientUnitId === parentUnit?.id)
-
+        const unitReport = hierarchyReportsIndex.getUnitReports(currentUnit.id).find(report => report.reportTypeId === reportType);
         const childrenReports = Object
             .values(hierarchyReportsIndex.getChildrenReports(currentUnit.id))
             .flat()
             .filter(report => report.reportTypeId === reportType);
-            
+
+        const parentUnit = unitsMap[currentUnit.parent?.id ?? -1];
         const childrenUnits = childrenByParentMap[currentUnit.id] ?? [];
 
         if (currentUnit.level !== UNIT_LEVELS.GDUD &&
@@ -533,23 +528,10 @@ export const getAggregatedReports = async ({
         dbReports,
         childrenByParentMap,
     });
-    const requestedUnits = sortNumeric(Array.from(new Set(unitsToLaunch)));
-    const requestedUnitsSet = new Set<number>(requestedUnits);
-    const rootLaunchUnits = requestedUnits.filter((unitId) => {
-        let parentId = unitsMap[unitId]?.parent?.id ?? null;
-
-        while (parentId !== null) {
-            if (requestedUnitsSet.has(parentId)) return false;
-            parentId = unitsMap[parentId]?.parent?.id ?? null;
-        }
-
-        return true;
-    });
 
     try {
-        for (const unit of rootLaunchUnits) {
+        for (const unit of unitsToLaunch) {
             const currentUnit = unitsMap[unit];
-            if (!currentUnit) continue;
 
             for (const reportType of [REPORT_TYPES.USAGE, REPORT_TYPES.INVENTORY, REPORT_TYPES.REQUEST]) {
                 await calculateReports(
