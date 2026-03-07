@@ -1,18 +1,20 @@
-import { BadGatewayException, Injectable, Logger } from "@nestjs/common";
+import { BadGatewayException, BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Op } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
-import { MESSAGE_TYPES, RECORD_STATUS } from "src/contants";
+import { MESSAGE_TYPES, REPORT_TYPES, UNIT_LEVELS, UNIT_STATUSES } from "src/contants";
 import { UnitHierarchyService } from "src/entities/unit-entities/features/unit-hierarchy/unit-hierarchy.service";
 import { UnitRelation } from "src/entities/unit-entities/unit-relations/unit-relation.model";
 import { Unit } from "src/entities/unit-entities/unit/unit.model";
 import { formatDate } from "src/utils/date";
 import { ReportRepository } from "./report.repository";
 import {
+    AggregateUnitDto,
     AggregateReportsDTO,
-    MaterialDto,
+    FavoriteReportDto,
+    InventoryCalculationResultDto,
     ReportDto,
-    SaveReportsBody,
+    SaveReportsBody
 } from "./report.types";
 import {
     assertLowerHierarchyStable,
@@ -24,8 +26,13 @@ import {
     getAggregatedReports,
     sortNumeric,
 } from "./utilities/report-aggregate-hierarchy.utils";
-import { buildReportsMaterialsResponse, buildReportsResponse } from "./utilities/report-fetch.utils";
+import {
+    buildFavoriteReportsResponse,
+    buildReportsMaterialsResponse,
+    buildReportsResponse
+} from "./utilities/report-fetch.utils";
 import { buildReportsToSave } from "./utilities/report-save.utils";
+import { isEmptyish } from "remeda";
 
 @Injectable()
 export class ReportService {
@@ -106,13 +113,38 @@ export class ReportService {
         });
     }
 
-    async fetchFavoriteReports(date: string, recipientUnitId: number): Promise<ReportDto[]> {
-        const reports = await this.repository.fetchFavoriteReportsData(date, recipientUnitId);
+    async fetchFavoriteReports(date: string, recipientUnitId: number): Promise<{ data: FavoriteReportDto[]; message: string; type: string }> {
+        try {
+            const hierarchy = await this.unitHierarchyService.getHierarchyForUser(recipientUnitId, date);
 
-        return buildReportsResponse({
-            recipientUnitId,
-            reports,
-        });
+            const directChildren = hierarchy
+                .filter((unit) => unit.parent?.id === recipientUnitId)
+
+            const reportTypeIds = [
+                REPORT_TYPES.REQUEST,
+                REPORT_TYPES.INVENTORY,
+                REPORT_TYPES.USAGE,
+                REPORT_TYPES.ALLOCATION,
+            ];
+            const favoriteMaterials = await this.repository.fetchFavoriteMaterials(recipientUnitId);
+
+            return {
+                data: buildFavoriteReportsResponse(
+                    favoriteMaterials,
+                    directChildren,
+                    reportTypeIds
+                ),
+                message: 'ייבוא המק״טים צלח',
+                type: MESSAGE_TYPES.SUCCESS
+            };
+        } catch (error) {
+            console.log(error);
+
+            throw new BadGatewayException({
+                message: 'הבאת מק״טים מועדפים נכשלה, יש לנסות שנית',
+                type: MESSAGE_TYPES.FAILURE
+            })
+        }
     }
 
     async fetchMostRecentMaterials(date: string, recipientUnitId: number) {
@@ -125,7 +157,7 @@ export class ReportService {
                     recipientUnitId,
                     reports,
                 }),
-                message: 'הבאת המק״טים צלחה',
+                message: 'ייבוא המק״טים צלח',
                 type: MESSAGE_TYPES.SUCCESS
             };
         } catch (error) {
@@ -209,6 +241,249 @@ export class ReportService {
                 message: 'נעילת ההיררכיה נכשלה, יש לנסות שוב',
                 type: MESSAGE_TYPES.FAILURE
             });
+        }
+    }
+
+    private getPreviousCalendarDate(date: string): string {
+        const [year, month, day] = date.split("-").map((value) => Number(value));
+        const parsed = year && month && day
+            ? new Date(year, month - 1, day)
+            : new Date(date);
+
+        parsed.setDate(parsed.getDate() - 1);
+
+        const parsedYear = parsed.getFullYear();
+        const parsedMonth = `${parsed.getMonth() + 1}`.padStart(2, "0");
+        const parsedDay = `${parsed.getDate()}`.padStart(2, "0");
+
+        return `${parsedYear}-${parsedMonth}-${parsedDay}`;
+    }
+
+    private buildParentByChildForConnectedUnits(
+        connectedUnitIds: number[],
+        parentsByChild: Map<number, number[]>,
+        connectedUnitSet: Set<number>
+    ): Map<number, number> {
+        const parentByChild = new Map<number, number>();
+
+        for (const childUnitId of connectedUnitIds) {
+            const directParentId = sortNumeric(
+                (parentsByChild.get(childUnitId) ?? []).filter((parentUnitId) => connectedUnitSet.has(parentUnitId))
+            )[0];
+
+            if (directParentId !== undefined) {
+                parentByChild.set(childUnitId, directParentId);
+            }
+        }
+
+        return parentByChild;
+    }
+
+    private buildUnitMaterialQuantityMap(
+        quantities: Array<{ unitId: number; materialId: string; quantity: number }>
+    ): Map<string, number> {
+        const quantityByUnitMaterial = new Map<string, number>();
+
+        for (const quantityRow of quantities) {
+            const mapKey = `${quantityRow.unitId}:${quantityRow.materialId}`;
+            quantityByUnitMaterial.set(
+                mapKey,
+                (quantityByUnitMaterial.get(mapKey) ?? 0) + Number(quantityRow.quantity ?? 0)
+            );
+        }
+
+        return quantityByUnitMaterial;
+    }
+
+    private collectUnitsForLockedDirectChildBranches(
+        screenUnitId: number,
+        childrenByParent: Map<number, number[]>,
+        unitsById: Map<number, AggregateUnitDto>
+    ): number[] {
+        const directChildIds = sortNumeric(childrenByParent.get(screenUnitId) ?? []);
+        const lockedDirectChildIds = directChildIds.filter((directChildId) => {
+            const statusId = unitsById.get(directChildId)?.status?.id ?? UNIT_STATUSES.REQUESTING;
+            return statusId === UNIT_STATUSES.WAITING_FOR_ALLOCATION;
+        });
+
+        const includedUnitIds = new Set<number>([screenUnitId]);
+        const queue = [...lockedDirectChildIds];
+
+        while (queue.length > 0) {
+            const currentUnitId = queue.shift();
+            if (currentUnitId === undefined || includedUnitIds.has(currentUnitId)) continue;
+
+            includedUnitIds.add(currentUnitId);
+
+            for (const childUnitId of childrenByParent.get(currentUnitId) ?? []) {
+                if (includedUnitIds.has(childUnitId)) continue;
+                queue.push(childUnitId);
+            }
+        }
+
+        return sortNumeric(Array.from(includedUnitIds));
+    }
+
+    private aggregateGdudQuantitiesToAncestors(
+        gdudQuantitiesByUnitMaterial: Map<string, number>,
+        parentByChild: Map<number, number>,
+        connectedUnitSet: Set<number>,
+        screenUnitId: number,
+        includeGdudUnit: boolean = false
+    ): Map<string, number> {
+        const aggregatedByUnitMaterial = new Map<string, number>();
+
+        for (const [unitMaterialKey, quantity] of gdudQuantitiesByUnitMaterial.entries()) {
+            const [gdudUnitIdAsString, materialId] = unitMaterialKey.split(":");
+            const gdudUnitId = Number(gdudUnitIdAsString);
+            if (!gdudUnitId || !materialId) continue;
+
+            if (includeGdudUnit && connectedUnitSet.has(gdudUnitId)) {
+                const gdudKey = `${gdudUnitId}:${materialId}`;
+                aggregatedByUnitMaterial.set(
+                    gdudKey,
+                    (aggregatedByUnitMaterial.get(gdudKey) ?? 0) + quantity
+                );
+            }
+
+            let currentParentId = parentByChild.get(gdudUnitId);
+            while (currentParentId !== undefined && connectedUnitSet.has(currentParentId)) {
+                const parentKey = `${currentParentId}:${materialId}`;
+                aggregatedByUnitMaterial.set(
+                    parentKey,
+                    (aggregatedByUnitMaterial.get(parentKey) ?? 0) + quantity
+                );
+
+                if (currentParentId === screenUnitId) break;
+                currentParentId = parentByChild.get(currentParentId);
+            }
+        }
+
+        return aggregatedByUnitMaterial;
+    }
+
+    private buildInventoryCalculationResults(
+        aggregatedInventoryByUnitMaterial: Map<string, number>,
+        aggregatedUsageByUnitMaterial: Map<string, number>
+    ): InventoryCalculationResultDto[] {
+        const allUnitMaterialKeys = new Set<string>([
+            ...aggregatedInventoryByUnitMaterial.keys(),
+            ...aggregatedUsageByUnitMaterial.keys(),
+        ]);
+
+        return Array
+            .from(allUnitMaterialKeys)
+            .map((unitMaterialKey) => {
+                const [unitIdAsString, materialId] = unitMaterialKey.split(":");
+                const aggregatedInventoryQuantity = aggregatedInventoryByUnitMaterial.get(unitMaterialKey) ?? 0;
+                const aggregatedUsageQuantity = aggregatedUsageByUnitMaterial.get(unitMaterialKey) ?? 0;
+
+                return {
+                    materialId,
+                    unitId: Number(unitIdAsString),
+                    quantity: Math.max(aggregatedInventoryQuantity - aggregatedUsageQuantity, 0),
+                };
+            })
+            .sort((left, right) => {
+                if (left.unitId !== right.unitId) return left.unitId - right.unitId;
+                return left.materialId.localeCompare(right.materialId);
+            });
+    }
+
+    async inventoryCalculation(
+        date: string,
+        screenUnitId: number,
+        materialIds: string[] = []
+    ): Promise<{ data: InventoryCalculationResultDto[]; message: string; type: string }> {
+        try {
+            if (materialIds.length === 0) {
+                throw new BadRequestException({
+                    message: 'אין מק״טים לחשב עבורם מלאי',
+                    type: MESSAGE_TYPES.FAILURE
+                });
+            }
+
+            const activeRelations = await this.unitHierarchyService.fetchActiveRelations(date) as UnitRelation[];
+            const emergencyUnitLookup = this.unitHierarchyService.buildEmergencyUnitLookup(activeRelations);
+            const { childrenByParent, parentsByChild, unitsById } = buildHierarchyIndexes(
+                activeRelations,
+                emergencyUnitLookup
+            );
+
+            const connectedUnitIds = this.collectUnitsForLockedDirectChildBranches(
+                screenUnitId,
+                childrenByParent,
+                unitsById
+            );
+            const connectedUnitSet = new Set<number>(connectedUnitIds);
+            const gdudUnitIds = connectedUnitIds.filter(
+                (unitId) => (unitsById.get(unitId)?.level) === UNIT_LEVELS.GDUD
+            );
+
+            const parentByChild = this.buildParentByChildForConnectedUnits(
+                connectedUnitIds,
+                parentsByChild,
+                connectedUnitSet
+            );
+
+            const previousDate = this.getPreviousCalendarDate(date);
+
+            const [yesterdayInventory, todayUsage] = await Promise.all([
+                this.repository.fetchActiveReportItemQuantitiesByUnitAndMaterial(
+                    previousDate,
+                    REPORT_TYPES.INVENTORY,
+                    materialIds,
+                    gdudUnitIds
+                ),
+                this.repository.fetchActiveReportItemQuantitiesByUnitAndMaterial(
+                    date,
+                    REPORT_TYPES.USAGE,
+                    materialIds,
+                    gdudUnitIds
+                ),
+            ]);
+
+            const inventoryByUnitMaterial = this.buildUnitMaterialQuantityMap(yesterdayInventory);
+            const usageByUnitMaterial = this.buildUnitMaterialQuantityMap(todayUsage);
+
+            const aggregatedInventoryByUnitMaterial = this.aggregateGdudQuantitiesToAncestors(
+                inventoryByUnitMaterial,
+                parentByChild,
+                connectedUnitSet,
+                screenUnitId,
+                true
+            );
+            const aggregatedUsageByUnitMaterial = this.aggregateGdudQuantitiesToAncestors(
+                usageByUnitMaterial,
+                parentByChild,
+                connectedUnitSet,
+                screenUnitId,
+                true
+            );
+            const data = this.buildInventoryCalculationResults(
+                aggregatedInventoryByUnitMaterial,
+                aggregatedUsageByUnitMaterial
+            );
+
+            if (isEmptyish(data)) {
+                throw new BadGatewayException({
+                    message: 'לא נמצא מלאי לחישוב',
+                    type: MESSAGE_TYPES.FAILURE
+                })
+            }
+
+            return {
+                data: data,
+                message: 'חישוב המלאי הצליח',
+                type: MESSAGE_TYPES.SUCCESS
+            }
+        } catch (error) {
+            console.log(error.response.message);
+
+            throw new BadGatewayException({
+                message: error?.response?.message ?? 'חישוב המלאי נכשל, יש לנסות שנית',
+                type: MESSAGE_TYPES.FAILURE
+            })
         }
     }
 }

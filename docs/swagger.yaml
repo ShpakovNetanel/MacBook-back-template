@@ -1,0 +1,1038 @@
+openapi: 3.0.3
+info:
+  title: MacBook Back Template API
+  version: 1.0.0
+  description: >
+    Exported API contract from current NestJS controllers. All responses are wrapped
+    by a global response interceptor as `{ success, statusCode, body: { data, message, type? } }`.
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Materials
+    description: Material catalog search and listing.
+  - name: FavoriteMaterial
+    description: Manage per-unit favorite materials.
+  - name: Comments
+    description: Save and delete material comments for unit/report context.
+  - name: Reports
+    description: Read and update reporting data and hierarchy aggregation.
+  - name: ReportItems
+    description: Bulk clear report items for selected report types.
+  - name: UnitStatuses
+    description: Update or clear statuses for units and optional hierarchy.
+  - name: UnitsHierarchy
+    description: Read and mutate unit hierarchy relations.
+
+paths:
+  /materials/twenty:
+    get:
+      tags: [Materials]
+      summary: Fetch up to 20 materials by search filter
+      description: Returns materials sorted by favorite status then by material id.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+        - $ref: '#/components/parameters/UnitHeader'
+        - in: query
+          name: filter
+          required: true
+          schema:
+            type: string
+          description: Free-text filter applied to material id or description.
+      responses:
+        '200':
+          description: Materials fetched successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialsTwentyResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /favoriteMaterial:
+    post:
+      tags: [FavoriteMaterial]
+      summary: Add material to unit favorites
+      description: Creates a unit-material favorite relation.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnitFavoriteMaterialRequest'
+      responses:
+        '200':
+          description: Favorite relation created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageOnlyResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+
+    delete:
+      tags: [FavoriteMaterial]
+      summary: Remove material from unit favorites
+      description: Deletes a unit-material favorite relation.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnitFavoriteMaterialRequest'
+      responses:
+        '200':
+          description: Favorite relation removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageOnlyResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /comment:
+    post:
+      tags: [Comments]
+      summary: Save or update a comment
+      description: >
+        Upserts a comment by `{unitId, recipientUnitId, materialId, type, date}`.
+        The persisted date is taken from `screendate` header.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+      responses:
+        '200':
+          description: Comment saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageOnlyResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+
+    delete:
+      tags: [Comments]
+      summary: Delete a comment
+      description: Deletes a comment by composite key.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+      responses:
+        '200':
+          description: Number of deleted rows in `body.data`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumericDataResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reports:
+    get:
+      tags: [Reports]
+      summary: Fetch reports for current unit/date
+      description: Returns full report structure grouped by material and reporting units.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+        - $ref: '#/components/parameters/UnitHeader'
+      responses:
+        '200':
+          description: Reports fetched.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportsListResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reports/favorites:
+    get:
+      tags: [Reports]
+      summary: Fetch favorite-material reports
+      description: Returns favorite materials as report shell objects with direct screen-unit children in `items`, each containing placeholder entries for all report types (without loading report rows).
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+        - $ref: '#/components/parameters/UnitHeader'
+      responses:
+        '200':
+          description: Favorite reports fetched.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoriteReportsListResponse'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reports/recentMaterials:
+    get:
+      tags: [Reports]
+      summary: Fetch recently used materials
+      description: Returns report materials based on recent reporting activity.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+        - $ref: '#/components/parameters/UnitHeader'
+      responses:
+        '200':
+          description: Recent materials fetched.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportsListResponse'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reports/saveChanges:
+    post:
+      tags: [Reports]
+      summary: Save report changes
+      description: Persists edited report item quantities/statuses for current date and user.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+        - $ref: '#/components/parameters/UnitHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveReportsRequest'
+      responses:
+        '200':
+          description: Changes saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageOnlyResponse'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reports/aggregateHierarchy:
+    post:
+      tags: [Reports]
+      summary: Aggregate hierarchy reports
+      description: Rebuilds aggregated reports for selected units after validating hierarchy state.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+        - $ref: '#/components/parameters/UnitHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AggregateHierarchyRequest'
+      responses:
+        '200':
+          description: Hierarchy aggregation completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageOnlyResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reports/inventoryCalculation:
+    post:
+      tags: [Reports]
+      summary: Calculate hierarchy inventory baseline
+      description: >
+        For gdud units under the current screen unit on `screendate`, calculates
+        per-ancestor quantity as: yesterday inventory - today usage, filtered by
+        requested material ids and active report items only. Branches whose direct child under
+        `screenUnit` has status `WAITING_FOR_ALLOCATION` are skipped entirely. Negative results are clamped to 0.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+        - $ref: '#/components/parameters/UnitHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryCalculationRequest'
+      responses:
+        '200':
+          description: Inventory calculation completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryCalculationResponse'
+        '502':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /reportsItems:
+    delete:
+      tags: [ReportItems]
+      summary: Delete report items by material and report types
+      description: Marks matching report items inactive and clears their quantities.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+        - $ref: '#/components/parameters/UnitHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteReportItemsRequest'
+      responses:
+        '200':
+          description: Operation succeeded. Data can be null/empty.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NullableDataResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /statuses:
+    post:
+      tags: [UnitStatuses]
+      summary: Update or clear unit statuses
+      description: Updates status for units, optionally cascading to their hierarchy.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUnitStatusRequest'
+      responses:
+        '200':
+          description: Repository result in `body.data` (affected rows or updated objects).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlexibleDataResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /units:
+    get:
+      tags: [UnitsHierarchy]
+      summary: Fetch all active units with direct parent
+      description: Returns flattened list of active units with status and immediate parent details.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+      responses:
+        '200':
+          description: Units fetched.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitsHierarchyResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /units/hierarchy:
+    get:
+      tags: [UnitsHierarchy]
+      summary: Fetch hierarchy for root unit
+      description: Builds hierarchy rooted at header `unit` (defaults to 1 when missing).
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+        - $ref: '#/components/parameters/OptionalUnitHeader'
+      responses:
+        '200':
+          description: Hierarchy fetched.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitsHierarchyResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+    post:
+      tags: [UnitsHierarchy]
+      summary: Add hierarchy relation
+      description: Adds parent-child relation (`upperUnit` -> `lowerUnit`) for current screen date.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HierarchyRelationRequest'
+      responses:
+        '200':
+          description: Relation added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageOnlyResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+    delete:
+      tags: [UnitsHierarchy]
+      summary: Remove hierarchy relation
+      description: Removes parent-child relation for current screen date.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HierarchyRelationRequest'
+      responses:
+        '200':
+          description: Relation removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageOnlyResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+    put:
+      tags: [UnitsHierarchy]
+      summary: Transfer hierarchy relation
+      description: Moves `lowerUnit` from existing parent to new `upperUnit` for current screen date.
+      parameters:
+        - $ref: '#/components/parameters/ScreenDateHeader'
+        - $ref: '#/components/parameters/UserHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HierarchyRelationRequest'
+      responses:
+        '200':
+          description: Relation transferred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageOnlyResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+components:
+  parameters:
+    ScreenDateHeader:
+      in: header
+      name: screendate
+      required: true
+      description: Screen date in `YYYY-MM-DD`; required by global middleware.
+      schema:
+        type: string
+        example: '2026-03-02'
+    UserHeader:
+      in: header
+      name: user
+      required: false
+      description: Username for auditing; defaults to `S9107544` when missing.
+      schema:
+        type: string
+        example: S1234567
+    UnitHeader:
+      in: header
+      name: unit
+      required: true
+      description: Unit id used by the endpoint logic.
+      schema:
+        type: integer
+        example: 1234
+    OptionalUnitHeader:
+      in: header
+      name: unit
+      required: false
+      description: Optional root unit id (defaults to `1` for this endpoint).
+      schema:
+        type: integer
+        example: 1234
+
+  responses:
+    ErrorResponse:
+      description: Error envelope returned by global exception filter.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    MessageType:
+      type: string
+      enum: [Success, Failure, Fatal]
+
+    ErrorResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        statusCode:
+          type: integer
+          example: 400
+        body:
+          type: object
+          required: [data, message]
+          properties:
+            data:
+              nullable: true
+              default: null
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'
+
+    MaterialTwentyItem:
+      type: object
+      description: Material entity returned from `/materials/twenty`.
+      required:
+        - id
+        - description
+        - centerId
+        - sectionId
+        - type
+        - recordStatus
+        - unitOfMeasure
+        - multiply
+        - category
+        - nickname
+        - favorite
+        - comment
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+          nullable: true
+        centerId:
+          type: integer
+        sectionId:
+          type: integer
+        type:
+          type: string
+        recordStatus:
+          type: string
+        unitOfMeasure:
+          type: string
+          nullable: true
+        multiply:
+          type: number
+        category:
+          type: string
+        nickname:
+          type: string
+        favorite:
+          type: boolean
+        comment:
+          type: string
+
+    UnitFavoriteMaterialRequest:
+      type: object
+      description: Unit-favorite relation payload.
+      required: [unitId, materialId]
+      properties:
+        unitId:
+          type: integer
+          minimum: 0
+        materialId:
+          type: string
+          minLength: 1
+          maxLength: 18
+
+    CommentRequest:
+      type: object
+      description: Comment entity payload.
+      required: [unitId, materialId, date, type, recipientUnitId]
+      properties:
+        unitId:
+          type: number
+        materialId:
+          type: string
+        date:
+          type: string
+          description: Required by DTO. For POST it is overwritten by `screendate`.
+          example: '2026-03-02'
+        type:
+          type: number
+        recipientUnitId:
+          type: number
+        text:
+          type: string
+          nullable: true
+
+    DeleteReportItemsRequest:
+      type: object
+      description: Criteria to clear report items for selected material/report types.
+      required: [reportTypes, materialId]
+      properties:
+        reportTypes:
+          type: array
+          items:
+            type: integer
+        materialId:
+          type: string
+
+    SaveReportChange:
+      type: object
+      required: [materialId, type, unitId, quantity, status]
+      properties:
+        materialId:
+          type: string
+        type:
+          type: integer
+        unitId:
+          type: integer
+        quantity:
+          type: number
+        status:
+          type: string
+
+    SaveReportsRequest:
+      type: object
+      description: Save changes payload for reports entity.
+      required: [changes, children]
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaveReportChange'
+        children:
+          type: array
+          items:
+            type: integer
+
+    AggregateHierarchyRequest:
+      type: object
+      description: Input for hierarchy aggregation lock operation.
+      required: [unitsIds, lowerUnitsIds]
+      properties:
+        unitsIds:
+          type: array
+          items:
+            type: integer
+        lowerUnitsIds:
+          type: array
+          items:
+            type: integer
+
+    InventoryCalculationRequest:
+      type: object
+      required: [materialIds]
+      properties:
+        materialIds:
+          type: array
+          items:
+            type: string
+
+    UnitStatus:
+      type: object
+      required: [id, description]
+      properties:
+        id:
+          type: integer
+        description:
+          type: string
+
+    UnitParent:
+      type: object
+      required: [id, description, level, simul, status]
+      properties:
+        id:
+          type: integer
+        description:
+          type: string
+        level:
+          type: integer
+        simul:
+          type: string
+        status:
+          $ref: '#/components/schemas/UnitStatus'
+
+    UnitNode:
+      type: object
+      description: Hierarchy unit entity.
+      required: [id, description, level, simul, isEmergencyUnit, status, parent]
+      properties:
+        id:
+          type: integer
+        description:
+          type: string
+        level:
+          type: integer
+        simul:
+          type: string
+        isEmergencyUnit:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/UnitStatus'
+        parent:
+          allOf:
+            - $ref: '#/components/schemas/UnitParent'
+          nullable: true
+
+    ReportUnit:
+      type: object
+      required: [id, description, level, simul, status, parent]
+      properties:
+        id:
+          type: integer
+        description:
+          type: string
+        level:
+          type: integer
+        simul:
+          type: string
+        status:
+          $ref: '#/components/schemas/UnitStatus'
+        parent:
+          allOf:
+            - $ref: '#/components/schemas/UnitParent'
+          nullable: true
+
+    ReportItemType:
+      type: object
+      required: [id, quantity, comment, status]
+      properties:
+        id:
+          type: integer
+        quantity:
+          type: number
+        comment:
+          type: string
+        status:
+          type: string
+          nullable: true
+
+    ReportItem:
+      type: object
+      required: [unit, types]
+      properties:
+        unit:
+          $ref: '#/components/schemas/ReportUnit'
+        types:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportItemType'
+
+    ReportMaterial:
+      type: object
+      required: [id, description, multiply, nickname, category, unitOfMeasure]
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        multiply:
+          type: number
+        nickname:
+          type: string
+        category:
+          type: string
+        unitOfMeasure:
+          type: string
+
+    ReportDto:
+      type: object
+      description: Report entity grouped by material.
+      required: [material, comment, allocatedQuantity, items]
+      properties:
+        material:
+          $ref: '#/components/schemas/ReportMaterial'
+        comment:
+          type: string
+        allocatedQuantity:
+          type: number
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportItem'
+
+    InventoryCalculationItem:
+      type: object
+      required: [materialId, unitId, quantity]
+      properties:
+        materialId:
+          type: string
+        unitId:
+          type: integer
+        quantity:
+          type: number
+
+    FavoriteReportDto:
+      type: object
+      description: Favorite material report shell without actual report data.
+      required: [material, items]
+      properties:
+        material:
+          $ref: '#/components/schemas/ReportMaterial'
+        items:
+          description: Direct children of the screen unit; each includes all report types with default values.
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportItem'
+
+    HierarchyRelationRequest:
+      type: object
+      description: Entity payload for add/remove/transfer hierarchy operations.
+      required: [lowerUnit, upperUnit, rootUnit]
+      properties:
+        lowerUnit:
+          type: integer
+        upperUnit:
+          type: integer
+        rootUnit:
+          type: integer
+          nullable: true
+
+    UpdateUnitStatusRequest:
+      type: object
+      description: Unit status update entity.
+      required: [unitsIds, statusId, updateHierarchy]
+      properties:
+        unitsIds:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        statusId:
+          type: integer
+        updateHierarchy:
+          type: boolean
+        clearHierarchyStatuses:
+          type: boolean
+
+    MessageOnlyResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        statusCode:
+          type: integer
+        body:
+          type: object
+          required: [message]
+          properties:
+            data:
+              nullable: true
+              default: null
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'
+
+    NumericDataResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        statusCode:
+          type: integer
+        body:
+          type: object
+          required: [data, message]
+          properties:
+            data:
+              type: integer
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'
+
+    NullableDataResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        statusCode:
+          type: integer
+        body:
+          type: object
+          required: [message]
+          properties:
+            data:
+              nullable: true
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'
+
+    FlexibleDataResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        statusCode:
+          type: integer
+        body:
+          type: object
+          required: [data, message]
+          properties:
+            data:
+              description: Sequelize repository return value.
+              oneOf:
+                - type: integer
+                - type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                - type: object
+                  additionalProperties: true
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'
+
+    ReportsListResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        statusCode:
+          type: integer
+        body:
+          type: object
+          required: [data, message]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReportDto'
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'
+
+    FavoriteReportsListResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        statusCode:
+          type: integer
+        body:
+          type: object
+          required: [data, message]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/FavoriteReportDto'
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'
+
+    InventoryCalculationResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        statusCode:
+          type: integer
+        body:
+          type: object
+          required: [data, message]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/InventoryCalculationItem'
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'
+
+    MaterialsTwentyResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        statusCode:
+          type: integer
+        body:
+          type: object
+          required: [data, message]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/MaterialTwentyItem'
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'
+
+    UnitsHierarchyResponse:
+      type: object
+      required: [success, statusCode, body]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        statusCode:
+          type: integer
+        body:
+          type: object
+          required: [data, message]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/UnitNode'
+            message:
+              type: string
+            type:
+              $ref: '#/components/schemas/MessageType'

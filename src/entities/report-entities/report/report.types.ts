@@ -82,6 +82,21 @@ export type ReportDto = {
     items: ReportItemDto[];
 };
 
+export type FavoriteReportDto = {
+    material: MaterialDto;
+    items: ReportItemDto[];
+};
+
+export type InventoryCalculationResultDto = {
+    materialId: string;
+    unitId: number;
+    quantity: number;
+};
+
+export type InventoryCalculationBody = {
+    materialsIds: string[];
+};
+
 export type AggregatedMaterials = {
     materialId: string;
     quantity: number;

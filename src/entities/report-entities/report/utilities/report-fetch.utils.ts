@@ -1,7 +1,9 @@
 import type { Material } from "src/entities/material-entities/material/material.model";
 import type { Report } from "src/entities/report-entities/report/report.model";
+import type { UnitHierarchyNode } from "src/entities/unit-entities/features/unit-hierarchy/unit-hierarchy.types";
 import type { Unit } from "src/entities/unit-entities/unit/unit.model";
 import type {
+    FavoriteReportDto,
     MaterialDto,
     ReportDto,
     ReportItemDto,
@@ -9,7 +11,7 @@ import type {
     UnitDto,
     UnitStatusDto,
 } from "../report.types";
-import { REPORT_TYPES } from "src/contants";
+import { RECORD_STATUS, REPORT_TYPES } from "src/contants";
 
 type FetchReportsParams = {
     recipientUnitId: number;
@@ -155,3 +157,51 @@ export const buildReportsResponse = ({ recipientUnitId, reports }: FetchReportsP
 
 export const buildReportsMaterialsResponse = (params: FetchReportsParams): ReportDto[] =>
     buildReportsResponse(params);
+
+const buildFavoriteItemTypes = (reportTypeIds: number[]): ReportItemTypeDto[] =>
+    reportTypeIds.map((reportTypeId) => ({
+        id: reportTypeId,
+        quantity: 0,
+        comment: "",
+        status: RECORD_STATUS.ACTIVE,
+    }));
+
+const buildFavoriteItems = (
+    childrenUnits: UnitHierarchyNode[],
+    reportTypeIds: number[]
+): ReportItemDto[] =>
+    childrenUnits.map((child) => ({
+        unit: {
+            id: child.id,
+            description: child.description,
+            level: child.level,
+            simul: child.simul,
+            parent: child.parent
+                ? {
+                    id: child.parent.id,
+                    description: child.parent.description,
+                    level: child.parent.level,
+                    simul: child.parent.simul,
+                    status: child.parent.status,
+                    parent: null,
+                }
+                : null,
+            status: child.status,
+        },
+        types: buildFavoriteItemTypes(reportTypeIds),
+    }));
+
+export const buildFavoriteReportsResponse = (
+    materials: Material[] | null | undefined,
+    childrenUnits: UnitHierarchyNode[],
+    reportTypeIds: number[]
+): FavoriteReportDto[] => {
+    if (!materials?.length) return [];
+
+    return materials
+        .map((material) => ({
+            material: buildMaterialDto(material.id, material),
+            items: buildFavoriteItems(childrenUnits, reportTypeIds),
+        }))
+        .sort((a, b) => a.material.id.localeCompare(b.material.id));
+};

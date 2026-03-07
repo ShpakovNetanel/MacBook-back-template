@@ -26,6 +26,7 @@ export class ReportRepository {
         @InjectModel(ReportItem) private readonly reportItemModel: typeof ReportItem,
         @InjectModel(UnitFavoriteMaterial) private readonly unitFavoriteMaterialModel: typeof UnitFavoriteMaterial,
         @InjectModel(UnitRelation) private readonly unitRelationModel: typeof UnitRelation,
+        @InjectModel(Material) private readonly materialModel: typeof Material,
         @InjectModel(Stock) private readonly stockModel: typeof Stock) { }
 
     async saveReports({ reportsToSave, transaction, skipEmptyItems = true }: ReportChanges): Promise<void> {
@@ -134,6 +135,77 @@ export class ReportRepository {
         return { descendantIds, parentByChild };
     }
 
+    async fetchReportsByTypeAndUnitsForMaterials(
+        date: string,
+        reportType: number,
+        materials: string[] | undefined = [],
+        units: number[]
+    ) {
+        return this.reportModel.findAll({
+            include: [{
+                association: 'items',
+                where: {
+                    materialId: { [Op.in]: materials }
+                }
+            }],
+            where: {
+                reportTypeId: reportType,
+                createdOn: new Date(date),
+                unitId: { [Op.in]: units }
+            }
+        })
+    }
+
+    async fetchActiveReportItemQuantitiesByUnitAndMaterial(
+        date: string,
+        reportType: number,
+        materialIds: string[],
+        unitIds: number[]
+    ): Promise<Array<{ unitId: number; materialId: string; quantity: number }>> {
+        if (materialIds.length === 0 || unitIds.length === 0) return [];
+
+        const reports = await this.reportModel.findAll({
+            attributes: ["unitId"],
+            where: {
+                reportTypeId: reportType,
+                createdOn: new Date(date),
+                unitId: { [Op.in]: unitIds },
+            },
+            include: [{
+                association: "items",
+                required: true,
+                attributes: ["materialId", "confirmedQuantity", "reportedQuantity"],
+                where: {
+                    materialId: { [Op.in]: materialIds },
+                    status: RECORD_STATUS.ACTIVE,
+                },
+            }],
+        });
+
+        const quantityByUnitMaterial = new Map<string, number>();
+        for (const report of reports) {
+            for (const item of report.items ?? []) {
+                const quantity = Number(item.confirmedQuantity ?? item.reportedQuantity ?? 0);
+                const safeQuantity = Number.isNaN(quantity) ? 0 : quantity;
+                const key = `${report.unitId}:${item.materialId}`;
+                quantityByUnitMaterial.set(
+                    key,
+                    (quantityByUnitMaterial.get(key) ?? 0) + safeQuantity
+                );
+            }
+        }
+
+        return Array.from(quantityByUnitMaterial.entries()).map(([key, quantity]) => {
+            const [unitIdAsString, materialId] = key.split(":");
+
+            return {
+                unitId: Number(unitIdAsString),
+                materialId,
+                quantity,
+            };
+        });
+    }
+
     async fetchReportsData(
         date: string,
         recipientUnitId: number,
@@ -167,6 +239,31 @@ export class ReportRepository {
             unitIds,
             itemStatuses: [RECORD_STATUS.ACTIVE, RECORD_STATUS.INACTIVE],
             materialIds: favoriteMaterialIds
+        });
+    }
+
+    async fetchFavoriteMaterials(recipientUnitId: number): Promise<Material[]> {
+        return this.materialModel.findAll({
+            where: {
+                recordStatus: RECORD_STATUS.ACTIVE
+            },
+            include: [{
+                association: "nickname",
+                required: false,
+            }, {
+                association: "materialCategory",
+                required: false,
+                include: [{
+                    association: "mainCategory",
+                    required: false,
+                }],
+            }, {
+                association: "unitFavorites",
+                required: true,
+                where: {
+                    unitId: recipientUnitId
+                }
+            }],
         });
     }
 
@@ -214,7 +311,7 @@ export class ReportRepository {
         });
     }
 
-    private async buildReportScope(date: string, recipientUnitId: number) {
+    async buildReportScope(date: string, recipientUnitId: number) {
         const { descendantIds } = await this.fetchDescendantUnits(new Date(date), recipientUnitId);
         return {
             descendantIds,

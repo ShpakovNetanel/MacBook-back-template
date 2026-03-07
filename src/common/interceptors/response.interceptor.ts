@@ -31,27 +31,17 @@ const isResponseShape = (value: unknown): value is ResponseShape<unknown> => {
 
 const splitMessageAndData = (
   value: unknown
-): { data: unknown; message: string } | null => {
+): { data: unknown; message: string; type: string } | null => {
   if (!value || typeof value !== "object") return null;
   const asRecord = value as Record<string, unknown>;
-  if (!("data" in asRecord) || !("message" in asRecord)) return null;
+  if (!("data" in asRecord) || !("message" in asRecord) || !("type" in asRecord)) return null;
   const message = asRecord.message;
   if (typeof message !== "string") return null;
+  const type = asRecord.type;
+  if (typeof type !== "string") return null;
   const keys = Object.keys(asRecord);
-  if (keys.length > 2) return null;
-  return { data: asRecord.data, message };
-};
-
-const splitMessageAndType = (
-  value: unknown
-): { data: null; message: string; type: unknown } | null => {
-  if (!value || typeof value !== "object") return null;
-  const asRecord = value as Record<string, unknown>;
-  if (!("message" in asRecord) || !("type" in asRecord)) return null;
-  if ("data" in asRecord) return null;
-  const message = asRecord.message;
-  if (typeof message !== "string") return null;
-  return { data: null, message, type: asRecord.type };
+  if (keys.length > 3) return null;
+  return { data: asRecord.data, message, type };
 };
 
 @Injectable()
@@ -62,14 +52,14 @@ export class ResponseInterceptor implements NestInterceptor {
       map((data) => {
         if (isResponseShape(data)) return data;
         const split = splitMessageAndData(data);
-        const splitType = split ? null : splitMessageAndType(data);
+
         return {
           success: true,
           statusCode: httpResponse?.statusCode ?? 200,
           body: {
-            data: split ? split.data : splitType ? splitType.data : data,
-            message: split?.message ?? splitType?.message ?? "OK",
-            ...(splitType ? { type: splitType.type } : {}),
+            data: split ? split.data : data,
+            message: split?.message ?? "OK",
+            ...(split ? { type: split.type } : {}),
           },
         };
       })

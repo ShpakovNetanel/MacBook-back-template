@@ -13,5 +13,5 @@ export default [
     ReportModule,
     UnitStatusTypesModule,
     CommentModule,
-    ReportItemModule
+    ReportItemModule,
 ];
