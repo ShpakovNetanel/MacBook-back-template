@@ -17,16 +17,9 @@ export class UnitHierarchyController {
 
   @Get("hierarchy")
   async getHierarchy(@Req() request: Request) {
-    const rootUnit = request?.['unit'];
+    const username = request?.['username'];
 
-    if(!isDefined(rootUnit)) {
-      throw new BadGatewayException({
-        message: 'אינך מקושר ליחידה ארגונית',
-        type: 'Fatal'
-      })
-    }
-
-    return this.service.getHierarchyForUser(Number(rootUnit), request?.["date"]);
+    return this.service.getHierarchyForUser(username, request?.["date"]);
   }
 
   @Post("hierarchy")

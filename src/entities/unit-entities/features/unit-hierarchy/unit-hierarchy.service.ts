@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { BadGatewayException, BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { Sequelize } from "sequelize-typescript";
 import { UnitHierarchyRepository } from "./unit-hierarchy.repository";
 import { UnitHierarchyNode } from "./unit-hierarchy.types";
@@ -13,6 +13,7 @@ import { UnitStatus } from "../../units-statuses/units-statuses.model";
 import { UnitStatusTypesRepository } from "../../units-statuses/units-statuses.repository";
 import { ReportRoutingRepository } from "src/entities/report-entities/report/report-routing.repository";
 import { formatDate } from "src/utils/date";
+import { isDefined } from "remeda";
 
 const DEFAULT_STATUS = { id: 0, description: "בדיווח" };
 const DATE_MISMATCH_ERROR = "לא ניתן לבצע שינוי היררכי על ימים עברו";
@@ -38,8 +39,18 @@ export class UnitHierarchyService {
     private readonly reportRoutingRepository: ReportRoutingRepository
   ) { }
 
-  async getHierarchyForUser(rootUnit: number, date: string): Promise<UnitHierarchyNode[]> {
+  async getHierarchyForUser(username: string, date: string): Promise<UnitHierarchyNode[]> {
     try {
+      const userUnit = await this.repository.fetchUnitUser(username, date);
+      const rootUnit = userUnit?.dataValues.unitId;
+
+      if (!isDefined(rootUnit)) {
+        throw new BadGatewayException({
+          message: 'אינך מקושר ליחידה ארגונית',
+          type: 'Fatal'
+        })
+      }
+
       const unitsRelations = await this.repository.fetchActive(date) as UnitRelation[];
       const emergencyUnitIds = getEmergencyUnitIds(unitsRelations);
 
@@ -567,11 +578,7 @@ export class UnitHierarchyService {
   }
 
   async fetchLowerUnits(date: string, unitId: number) {
-    const lowerUnits = await this.repository.fetchLowerUnits(new Date(date), unitId)
-
-    return lowerUnits.map(lowerUnit => ({
-      lowerUnitId: lowerUnit.dataValues.relatedUnitId
-    }))
+    return await this.repository.fetchActive(date, unitId);
   }
 
   async fetchActiveRelations(date: string): Promise<UnitRelation[]> {

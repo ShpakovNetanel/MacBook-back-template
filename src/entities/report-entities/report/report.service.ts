@@ -115,10 +115,8 @@ export class ReportService {
 
     async fetchFavoriteReports(date: string, recipientUnitId: number): Promise<{ data: FavoriteReportDto[]; message: string; type: string }> {
         try {
-            const hierarchy = await this.unitHierarchyService.getHierarchyForUser(recipientUnitId, date);
 
-            const directChildren = hierarchy
-                .filter((unit) => unit.parent?.id === recipientUnitId)
+            const directChildren = await this.unitHierarchyService.fetchLowerUnits(date, recipientUnitId)
 
             const reportTypeIds = [
                 REPORT_TYPES.REQUEST,

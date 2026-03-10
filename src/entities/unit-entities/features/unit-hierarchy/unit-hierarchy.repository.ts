@@ -8,6 +8,8 @@ import { UnitRelation } from "../../unit-relations/unit-relation.model";
 import { UnitId } from "../../unit-id/unit-id.model";
 import { UnitStatus } from "../../units-statuses/units-statuses.model";
 import { UnitStatusType } from "../../unit-status-type/unit-status-type.model";
+import { UnitUser } from "../../unit-users/unit-user.model";
+import { isDefined } from "remeda";
 
 export type UnitRelationEdge = {
   unitId: number;
@@ -36,10 +38,31 @@ export class UnitHierarchyRepository {
   constructor(
     @InjectModel(UnitRelation) private readonly unitRelationModel: typeof UnitRelation,
     @InjectModel(UnitStatus) private readonly unitStatusTypesModel: typeof UnitStatus,
+    @InjectModel(UnitUser) private readonly unitUser: typeof UnitUser,
     @InjectModel(Unit) private readonly unitDetailModel: typeof Unit,
   ) { }
 
-  fetchActive(date: string) {
+  fetchUnitUser(username: string, date: string) {
+    return this.unitUser.findOne({
+      where: {
+        userId: username,
+        startDate: {
+          [Op.lte]: date,
+        },
+        endDate: {
+          [Op.gt]: date
+        }
+      }
+    })
+  }
+
+  fetchActive(date: string, unitId?: number) {
+    const unitRelationWhereClause = {};
+
+    if (isDefined(unitId)) {
+      unitRelationWhereClause['unitId'] = unitId
+    };
+
     return this.unitRelationModel.findAll({
       include: [{
         attributes: ['id'],
@@ -88,6 +111,7 @@ export class UnitHierarchyRepository {
         }]
       }],
       where: {
+        ...unitRelationWhereClause,
         unitRelationId: UNIT_RELATION_TYPES.ZRA,
         startDate: { [Op.lte]: date },
         endDate: { [Op.gt]: date }
@@ -253,17 +277,5 @@ export class UnitHierarchyRepository {
       },
       { transaction }
     );
-  }
-
-  fetchLowerUnits(date: Date, unitId: number) {
-    return this.unitRelationModel.findAll({
-      attributes: ['relatedUnitId'],
-      where: {
-        unitId,
-        endDate: { [Op.gt]: date },
-        startDate: { [Op.lte]: date },
-        unitRelationId: UNIT_RELATION_TYPES.ZRA
-      }
-    })
   }
 }

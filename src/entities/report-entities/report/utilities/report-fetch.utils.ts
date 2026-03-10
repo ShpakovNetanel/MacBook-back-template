@@ -12,6 +12,7 @@ import type {
     UnitStatusDto,
 } from "../report.types";
 import { RECORD_STATUS, REPORT_TYPES } from "src/contants";
+import { UnitRelation } from "src/entities/unit-entities/unit-relations/unit-relation.model";
 
 type FetchReportsParams = {
     recipientUnitId: number;
@@ -167,33 +168,31 @@ const buildFavoriteItemTypes = (reportTypeIds: number[]): ReportItemTypeDto[] =>
     }));
 
 const buildFavoriteItems = (
-    childrenUnits: UnitHierarchyNode[],
+    childrenUnits: UnitRelation[],
     reportTypeIds: number[]
 ): ReportItemDto[] =>
-    childrenUnits.map((child) => ({
-        unit: {
-            id: child.id,
-            description: child.description,
-            level: child.level,
-            simul: child.simul,
-            parent: child.parent
-                ? {
-                    id: child.parent.id,
-                    description: child.parent.description,
-                    level: child.parent.level,
-                    simul: child.parent.simul,
-                    status: child.parent.status,
-                    parent: null,
-                }
-                : null,
-            status: child.status,
-        },
-        types: buildFavoriteItemTypes(reportTypeIds),
-    }));
+    childrenUnits.map((child) => {
+        const parentUnit = buildUnitDto(
+            child.unitId,
+            child.unit?.activeDetail,
+            null,
+            undefined
+        );
+
+        return {
+            unit: buildUnitDto(
+                child.relatedUnitId,
+                child.relatedUnit?.activeDetail,
+                parentUnit,
+                undefined
+            ),
+            types: buildFavoriteItemTypes(reportTypeIds),
+        };
+    });
 
 export const buildFavoriteReportsResponse = (
     materials: Material[] | null | undefined,
-    childrenUnits: UnitHierarchyNode[],
+    childrenUnits: UnitRelation[],
     reportTypeIds: number[]
 ): FavoriteReportDto[] => {
     if (!materials?.length) return [];
