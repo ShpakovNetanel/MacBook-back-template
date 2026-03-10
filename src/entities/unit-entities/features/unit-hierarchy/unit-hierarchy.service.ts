@@ -13,7 +13,7 @@ import { UnitStatus } from "../../units-statuses/units-statuses.model";
 import { UnitStatusTypesRepository } from "../../units-statuses/units-statuses.repository";
 import { ReportRoutingRepository } from "src/entities/report-entities/report/report-routing.repository";
 import { formatDate } from "src/utils/date";
-import { isDefined } from "remeda";
+import { isDefined, isEmpty, isEmptyish } from "remeda";
 
 const DEFAULT_STATUS = { id: 0, description: "בדיווח" };
 const DATE_MISMATCH_ERROR = "לא ניתן לבצע שינוי היררכי על ימים עברו";
@@ -69,6 +69,20 @@ export class UnitHierarchyService {
         rootUnit,
         emergencyUnitIds
       );
+
+      if (isEmptyish(rootNode?.description)) {
+        throw new BadGatewayException({
+          message: 'היחידה שאליה אתה מקושר לא קיימת, יש ליצור קשר עם התמיכה',
+          type: 'Fatal'
+        })
+      }
+
+      if (isEmptyish(hierarchy)) {
+        throw new BadGatewayException({
+          message: 'אין היררכיה ליחידה הנתונה',
+          type: 'Fatal'
+        })
+      }
 
       const normalized = hierarchy.map((node) => ({
         ...node,
