@@ -127,12 +127,21 @@ export class ReportService {
 
             const favoriteMaterials = await this.repository.fetchFavoriteMaterials(recipientUnitId);
 
+            const data = buildFavoriteReportsResponse(
+                favoriteMaterials,
+                directChildren,
+                reportTypeIds
+            );
+
+            if (isEmptyish(data)) {
+                throw new BadGatewayException({
+                    message: 'לא נמצאו מק״טים מועדפים',
+                    type: MESSAGE_TYPES.FAILURE
+                })
+            }
+
             return {
-                data: buildFavoriteReportsResponse(
-                    favoriteMaterials,
-                    directChildren,
-                    reportTypeIds
-                ),
+                data: data,
                 message: 'ייבוא המק״טים צלח',
                 type: MESSAGE_TYPES.SUCCESS
             };
@@ -140,7 +149,7 @@ export class ReportService {
             console.log(error);
 
             throw new BadGatewayException({
-                message: 'הבאת מק״טים מועדפים נכשלה, יש לנסות שנית',
+                message: error?.response?.message ?? 'הבאת מק״טים מועדפים נכשלה, יש לנסות שנית',
                 type: MESSAGE_TYPES.FAILURE
             })
         }

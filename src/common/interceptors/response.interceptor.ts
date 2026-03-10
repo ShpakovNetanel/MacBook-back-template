@@ -4,6 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from "@nestjs/common";
+import { isDefined } from "remeda";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
@@ -50,6 +51,8 @@ export class ResponseInterceptor implements NestInterceptor {
     const httpResponse = context.switchToHttp().getResponse();
     return next.handle().pipe(
       map((data) => {
+        if (!isDefined(data?.data)) data.data = [];
+
         if (isResponseShape(data)) return data;
         const split = splitMessageAndData(data);
 
@@ -57,7 +60,7 @@ export class ResponseInterceptor implements NestInterceptor {
           success: true,
           statusCode: httpResponse?.statusCode ?? 200,
           body: {
-            data: split ? split.data : data,
+            data: split ? split.data : data ?? [],
             message: split?.message ?? "OK",
             ...(split ? { type: split.type } : {}),
           },
