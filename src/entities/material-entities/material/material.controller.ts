@@ -4,7 +4,7 @@ import { PastedMaterialsDto } from "./material.types";
 
 @Controller('/materials')
 export class MaterialController {
-    constructor(private readonly service: MaterialService) {}
+    constructor(private readonly service: MaterialService) { }
 
     @Get('twenty')
     fetchTwenty(@Query('filter') filter: string, @Req() request: Request) {
@@ -12,7 +12,8 @@ export class MaterialController {
     }
 
     @Post('paste')
-    pastedMaterials(@Body() pastedMaterials: PastedMaterialsDto) {
-        return this.service;
+    pastedMaterials(@Body() pastedMaterials: PastedMaterialsDto,
+        @Req() request: Request) {
+        return this.service.fetchByIds(pastedMaterials, Number(request.headers['unit']));
     }
 }

@@ -1,3 +1,3 @@
 export class PastedMaterialsDto {
-    materialsIds: number[];
+    materialsIds: string[];
 }

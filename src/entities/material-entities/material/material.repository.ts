@@ -16,7 +16,7 @@ export class MaterialRepository {
         @InjectModel(Comment) private readonly commentModel: typeof Comment
     ) { }
 
-    async fetchAll(filter: string, unitId: number) {
+    async fetchBySearch(filter: string, unitId: number) {
         const materials = await this.materialModel.findAll({
             include: [{
                 attributes: ["materialId"],
@@ -61,5 +61,33 @@ export class MaterialRepository {
             });
 
         return { materials, comments };
+    }
+
+    async fetchByIds(materialsIds: string[], unitId: number) {
+        return await this.materialModel.findAll({
+            include: [{
+                attributes: ["materialId"],
+                model: MaterialCategory,
+                include: [{
+                    attributes: ['description'],
+                    model: MainCategory
+                }]
+            },
+            {
+                attributes: ["nickname"],
+                model: MaterialNickname,
+                required: false
+            },
+            {
+                attributes: ["materialId"],
+                model: UnitFavoriteMaterial,
+                where: { unitId },
+                required: false
+            }],
+            where: {
+                id: { [Op.in]: materialsIds },
+                recordStatus: RECORD_STATUS.ACTIVE
+            },
+        });
     }
 }
