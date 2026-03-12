@@ -1,12 +1,13 @@
 import {
-  BelongsTo, Column, DataType, ForeignKey, HasMany, HasOne, Model, PrimaryKey, Table
+  Column, DataType,
+  HasMany, HasOne, Model, PrimaryKey, Table
 } from "sequelize-typescript";
-import { MaterialCategory } from "../material-category/material-category.model";
-import { UnitFavoriteMaterial } from "../unit-favorite-material/unit-favorite-material.model";
-import { ReportItem } from "src/entities/report-entities/report-item/report-item.model";
-import { MaterialNickname } from "../material-nickname/material-nickname.model";
 import { Comment } from "src/entities/report-entities/comment/comment.model";
+import { ReportItem } from "src/entities/report-entities/report-item/report-item.model";
 import { Stock } from "src/entities/report-entities/stock/stock.model";
+import { MaterialCategory } from "../material-category/material-category.model";
+import { MaterialNickname } from "../material-nickname/material-nickname.model";
+import { UnitFavoriteMaterial } from "../unit-favorite-material/unit-favorite-material.model";
 
 export type IMaterial = {
   id: string;

@@ -9,14 +9,12 @@ import { MaterialCategory } from "src/entities/material-entities/material-catego
 import { MaterialNickname } from "src/entities/material-entities/material-nickname/material-nickname.model";
 import { Material } from "src/entities/material-entities/material/material.model";
 import { UnitFavoriteMaterial } from "src/entities/material-entities/unit-favorite-material/unit-favorite-material.model";
+import { UnitId } from "src/entities/unit-entities/unit-id/unit-id.model";
 import { UnitRelation } from "src/entities/unit-entities/unit-relations/unit-relation.model";
+import { UnitStatus } from "src/entities/unit-entities/units-statuses/units-statuses.model";
 import { IReportItem, ReportItem } from "../report-item/report-item.model";
-import { Stock } from "../stock/stock.model";
 import { IReport, Report } from "./report.model";
 import { ReportChanges } from "./report.types";
-import { UnitId } from "src/entities/unit-entities/unit-id/unit-id.model";
-import { Unit } from "src/entities/unit-entities/unit/unit.model";
-import { UnitStatus } from "src/entities/unit-entities/units-statuses/units-statuses.model";
 
 @Injectable()
 export class ReportRepository {
@@ -26,8 +24,7 @@ export class ReportRepository {
         @InjectModel(ReportItem) private readonly reportItemModel: typeof ReportItem,
         @InjectModel(UnitFavoriteMaterial) private readonly unitFavoriteMaterialModel: typeof UnitFavoriteMaterial,
         @InjectModel(UnitRelation) private readonly unitRelationModel: typeof UnitRelation,
-        @InjectModel(Material) private readonly materialModel: typeof Material,
-        @InjectModel(Stock) private readonly stockModel: typeof Stock) { }
+        @InjectModel(Material) private readonly materialModel: typeof Material) { }
 
     async saveReports({ reportsToSave, transaction, skipEmptyItems = true }: ReportChanges): Promise<void> {
         try {

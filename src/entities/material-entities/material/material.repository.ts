@@ -63,8 +63,8 @@ export class MaterialRepository {
         return { materials, comments };
     }
 
-    async fetchByIds(materialsIds: string[], unitId: number) {
-        return await this.materialModel.findAll({
+    fetchByIds(materialsIds: string[], unitId: number) {
+        return this.materialModel.findAll({
             include: [{
                 attributes: ["materialId"],
                 model: MaterialCategory,
