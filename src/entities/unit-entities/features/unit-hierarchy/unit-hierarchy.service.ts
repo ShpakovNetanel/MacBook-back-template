@@ -13,7 +13,7 @@ import { UnitStatus } from "../../units-statuses/units-statuses.model";
 import { UnitStatusTypesRepository } from "../../units-statuses/units-statuses.repository";
 import { ReportRoutingRepository } from "src/entities/report-entities/report/report-routing.repository";
 import { formatDate } from "src/utils/date";
-import { isDefined, isEmpty, isEmptyish } from "remeda";
+import { isDefined, isEmptyish } from "remeda";
 
 const DEFAULT_STATUS = { id: 0, description: "בדיווח" };
 const DATE_MISMATCH_ERROR = "לא ניתן לבצע שינוי היררכי על ימים עברו";

@@ -32,8 +32,9 @@ export const buildReportsToSave = ({
 }: BuildReportsParams): IReportsChanges[] => {
     const reportsByKey = new Map<string, IReportsChanges>();
     const changedBy = createdBy || null;
-    const createdOnDate = createdOn instanceof Date ? new Date(createdOn) : new Date(createdOn);
-    const modifiedAt = combineDateAndTime(createdOnDate, createdAt);
+    const createdOnDate = new Date(createdOn);
+
+    const modifiedAt = combineDateAndTime(new Date(), createdAt);
 
     for (const change of changes) {
         const parentUnitId = parentByChild.get(change.unitId) ?? recipientUnitId;

@@ -1,4 +1,4 @@
-import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './appModule.module';
 import * as dotenv from 'dotenv';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -15,8 +15,6 @@ https.globalAgent = new https.Agent({
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const httpAdapter = app.get(HttpAdapterHost);
-
   app.enableCors({
     origin: '*',
     methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS'

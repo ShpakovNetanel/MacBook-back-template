@@ -6,7 +6,6 @@ import {
   Model,
   PrimaryKey,
   Table,
-  Index,
 } from "sequelize-typescript";
 import { UnitId } from "../unit-id/unit-id.model";
 

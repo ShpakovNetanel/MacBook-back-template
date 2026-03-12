@@ -13,6 +13,6 @@ export class TagGroupController {
 
     @Post('')
     createTag(@Body() createTagGroupDTO: CreateTagGroupDTO) {
-        return this.service.createTagGroup(createTagGroupDTO.description);
+        return this.service.createTagGroup(createTagGroupDTO);
     }
 }

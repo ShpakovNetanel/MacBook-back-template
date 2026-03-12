@@ -1,6 +1,5 @@
 import type { Material } from "src/entities/material-entities/material/material.model";
 import type { Report } from "src/entities/report-entities/report/report.model";
-import type { UnitHierarchyNode } from "src/entities/unit-entities/features/unit-hierarchy/unit-hierarchy.types";
 import type { Unit } from "src/entities/unit-entities/unit/unit.model";
 import type {
     FavoriteReportDto,

@@ -1,4 +1,4 @@
-import { AutoIncrement, Column, DataType, HasMany, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { Column, DataType, HasMany, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { StandardTag } from "../standard-tag/standard-tag.model";
 
 export type ITagGroup = {

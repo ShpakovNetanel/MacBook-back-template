@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { MaterialRepository } from "./material.repository";
 import { PastedMaterialsDto } from "./material.types";
-import { MACADDR } from "sequelize";
 
 @Injectable()
 export class MaterialService {

@@ -15,9 +15,15 @@ export class TagGroupRepository {
         });
     }
 
-    createTagGroup(tagGroup: ITagGroup) {
-        return this.tagGroup.upsert(tagGroup, {
-            conflictFields: ['description']
+    fetchDescription(description: string) {
+        return this.tagGroup.findOne({
+            where: {
+                description
+            }
         })
+    }
+
+    createTagGroup(tagGroup: ITagGroup) {
+        return this.tagGroup.upsert(tagGroup)
     }
 }

@@ -1,10 +1,9 @@
-import { BadGatewayException, Body, Controller, Delete, Get, Post, Put, Req } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Post, Put, Req } from "@nestjs/common";
 import { UnitHierarchyService } from "./unit-hierarchy.service";
 import type { Request } from "express";
 import { RemoveUnitRelationDto } from "./DTO/remove-unit-relation.dto";
 import { AddUnitRelationDto } from "./DTO/add-unit-relation.dto";
 import { TransferUnitRelationDto } from "./DTO/update-unit-relation.dto";
-import { isDefined } from "remeda";
 
 @Controller("/units")
 export class UnitHierarchyController {
