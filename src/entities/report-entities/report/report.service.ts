@@ -226,13 +226,6 @@ export class ReportService {
                 username: user
             });
 
-            if (isEmptyish(reportsToSave)) {
-                throw new BadGatewayException({
-                    message: 'אין דיווחים להעלות',
-                    type: MESSAGE_TYPES.FAILURE
-                })
-            }
-
             await this.repository.saveReports({
                 reportsToSave: reportsToSave ?? [],
                 transaction
@@ -242,7 +235,7 @@ export class ReportService {
 
             return {
                 type: MESSAGE_TYPES.SUCCESS,
-                message: 'הדיווחים הועלו בהצלחה',
+                message: isEmptyish(reportsToSave) ? 'אין דיווחים להעלות' : 'הדיווחים הועלו בהצלחה',
             };
         } catch (error) {
             await transaction.rollback();
