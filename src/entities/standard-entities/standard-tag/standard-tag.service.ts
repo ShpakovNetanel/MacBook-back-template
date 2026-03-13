@@ -3,7 +3,7 @@ import { StandardTagRepository } from "./standard-tag.repository";
 import { CreateTagDTO, UpdateTagDTO } from "./standard-tag.types";
 import { IStandardTag } from "./standard-tag.model";
 import { MESSAGE_TYPES } from "src/contants";
-import { isDefined } from "remeda";
+import { isDefined, isNullish } from "remeda";
 
 @Injectable()
 export class StandardTagService {
@@ -14,7 +14,7 @@ export class StandardTagService {
             const existingTag = await this.repository.fetchByDescription(createTag.tag,
                 createTag.tagGroupId, createTag.unitLevel)
 
-            if (isDefined(existingTag)) {
+            if (!isNullish(existingTag)) {
                 throw new BadGatewayException({
                     message: 'התגית קיימת לרמה הארגונית תחת קבוצה זו',
                     type: MESSAGE_TYPES.FAILURE
