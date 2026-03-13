@@ -226,6 +226,13 @@ export class ReportService {
                 username: user
             });
 
+            if (isEmptyish(reportsToSave)) {
+                throw new BadGatewayException({
+                    message: 'אין דיווחים להעלות',
+                    type: MESSAGE_TYPES.FAILURE
+                })
+            }
+
             await this.repository.saveReports({
                 reportsToSave: reportsToSave ?? [],
                 transaction
@@ -240,13 +247,9 @@ export class ReportService {
         } catch (error) {
             await transaction.rollback();
 
-            if (error instanceof BadGatewayException) {
-                throw error;
-            }
-
             this.logger.error("Failed to aggregate hierarchy", error instanceof Error ? error.stack : String(error));
             throw new BadGatewayException({
-                message: 'נעילת ההיררכיה נכשלה, יש לנסות שוב',
+                message: error?.response?.message ?? 'נעילת ההיררכיה נכשלה, יש לנסות שוב',
                 type: MESSAGE_TYPES.FAILURE
             });
         }
