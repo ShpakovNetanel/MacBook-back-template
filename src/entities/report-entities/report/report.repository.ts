@@ -12,6 +12,7 @@ import { UnitFavoriteMaterial } from "src/entities/material-entities/unit-favori
 import { UnitId } from "src/entities/unit-entities/unit-id/unit-id.model";
 import { UnitRelation } from "src/entities/unit-entities/unit-relations/unit-relation.model";
 import { UnitStatus } from "src/entities/unit-entities/units-statuses/units-statuses.model";
+import { formatDate } from "src/utils/date";
 import { IReportItem, ReportItem } from "../report-item/report-item.model";
 import { IReport, Report } from "./report.model";
 import { ReportChanges } from "./report.types";
@@ -271,16 +272,16 @@ export class ReportRepository {
         const { descendantIds, unitIds } = await this.buildReportScope(date, recipientUnitId);
         if (descendantIds.length === 0) return [];
 
-        const latestCreatedOn = await this.reportModel.max("createdOn", {
+        const latestCreatedOn: Date = await this.reportModel.max("createdOn", {
             where: {
                 unitId: { [Op.in]: descendantIds },
                 recipientUnitId: { [Op.in]: unitIds },
-                createdOn: { [Op.lte]: date },
+                createdOn: { [Op.lt]: date },
                 reportTypeId: { [Op.in]: [REPORT_TYPES.REQUEST, REPORT_TYPES.INVENTORY, REPORT_TYPES.USAGE] }
             }
         });
 
-        const latestDate = this.toDateOnly(latestCreatedOn);
+        const { formattedDate: latestDate } = formatDate(latestCreatedOn);
         if (!latestDate) return [];
 
         return this.fetchReportsByScope({
@@ -347,20 +348,6 @@ export class ReportRepository {
                 materialIds
             ),
         });
-    }
-
-    private toDateOnly(value: unknown): string | null {
-        if (!value) return null;
-        if (value instanceof Date) {
-            const year = value.getFullYear();
-            const month = `${value.getMonth() + 1}`.padStart(2, "0");
-            const day = `${value.getDate()}`.padStart(2, "0");
-            return `${year}-${month}-${day}`;
-        }
-
-        const dateAsString = String(value);
-        if (dateAsString.length < 10) return null;
-        return dateAsString.slice(0, 10);
     }
 
     private buildReportsInclude(

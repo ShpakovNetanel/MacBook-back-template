@@ -38,10 +38,6 @@ export class MaterialService {
     async fetchByIds(pastedMaterials: PastedMaterialsDto, screenUnitId: number) {
         const materials = await this.repository.fetchByIds(pastedMaterials.materialsIds, screenUnitId);
 
-        materials.forEach(m => {
-            console.log(m.dataValues.id, (m?.unitFavorites ?? []));
-        })
-
         return materials
             .map(material => ({
                 ...material.dataValues,

@@ -159,7 +159,7 @@ export class ReportService {
         try {
 
             const reports = await this.repository.fetchMostRecentReportsData(date, recipientUnitId);
-
+            
             return {
                 data: buildReportsMaterialsResponse({
                     recipientUnitId,
