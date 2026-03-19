@@ -7,8 +7,8 @@ export class TagGroupController {
     constructor(private readonly service: TagGroupService) { }
 
     @Get('')
-    fetchAll() {
-        return this.service.fetchAll();
+    fetchAll(@Query('level') level: number) {
+        return this.service.fetchAll(level);
     }
 
     @Post('')

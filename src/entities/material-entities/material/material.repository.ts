@@ -41,7 +41,21 @@ export class MaterialRepository {
         if (materialIds.length === 0) return Promise.resolve([]);
 
         return this.materialModel.findAll({
-            attributes: ["id", "description", "multiply", "recordStatus"],
+            attributes: ["id", "description", "multiply", "recordStatus", "unitOfMeasurement"],
+            include: [{
+                attributes: ["nickname"],
+                model: MaterialNickname,
+                required: false
+            }, {
+                attributes: ["materialId"],
+                model: MaterialCategory,
+                required: false,
+                include: [{
+                    attributes: ["description"],
+                    model: MainCategory,
+                    required: false
+                }]
+            }],
             where: {
                 id: { [Op.in]: materialIds }
             }

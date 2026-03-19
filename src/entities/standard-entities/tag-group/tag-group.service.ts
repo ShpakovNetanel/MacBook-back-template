@@ -9,8 +9,8 @@ import { isDefined, isNullish } from "remeda";
 export class TagGroupService {
     constructor(private readonly repository: TagGroupRepository) { }
 
-    async fetchAll() {
-        const tagsGroups = await this.repository.fetchAll();
+    async fetchAll(level: number) {
+        const tagsGroups = await this.repository.fetchAll(level);
 
         return tagsGroups.map(tagGroup => ({
             id: tagGroup.dataValues.id,

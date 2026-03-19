@@ -20,6 +20,15 @@ type MaterialImportRow = {
     description: string;
     multiply: number;
     recordStatus: string;
+    unitOfMeasurement?: string;
+    nickname?: {
+        nickname?: string;
+    };
+    materialCategory?: {
+        mainCategory?: {
+            description?: string;
+        };
+    };
 };
 
 type HierarchyUnitSnapshot = {
@@ -72,19 +81,19 @@ export class ExcelService {
         screenUnitId: number,
         excelImportBody: ExcelImportBody
     ) {
-        const excelRows = this.combineDuplicateExcelRows(
-            this.normalizeExcelRows(excelImportBody?.excelRows ?? [])
-        );
-        const screenRows = excelImportBody?.screenRows ?? [];
+        const excelRows = excelImportBody.excelRows ?? [];
 
         if (excelRows.length === 0) {
             return this.buildResponse([], []);
         }
 
+        const screenRows = excelImportBody?.screenRows ?? [];
+
         const materialIds = Array.from(new Set([
             ...excelRows.map((row) => row.materialId),
             ...screenRows.map((row) => row.materialId),
         ]));
+
         const unitSimuls = Array.from(new Set(excelRows.map((row) => row.unitSimul).filter(Boolean)));
         const screenRowUnitIds = Array.from(new Set([
             screenUnitId,
@@ -115,10 +124,12 @@ export class ExcelService {
             return this.buildResponse([], failures);
         }
 
-        const affectedMaterialsByReportType = this.buildAffectedMaterialsByReportType(validRows);
+        const combinedValidRows = this.combineDuplicateExcelRows(validRows);
+
+        const affectedMaterialsByReportType = this.buildAffectedMaterialsByReportType(combinedValidRows);
         const affectedReportTypes = Array.from(affectedMaterialsByReportType.keys()).sort((left, right) => left - right);
         const dbUnitIds = this.collectDbUnitIds(affectedReportTypes, importScope);
-        const dbMaterialIds = Array.from(new Set(validRows.map((row) => row.materialId)));
+        const dbMaterialIds = Array.from(new Set(combinedValidRows.map((row) => row.materialId)));
 
         const dbRows = await this.reportRepository.fetchActiveReportItemQuantitiesByUnitMaterialAndType(
             date,
@@ -128,13 +139,14 @@ export class ExcelService {
         );
 
         const flatChanges = this.buildChanges({
-            validRows,
+            validRows: combinedValidRows,
             screenRows,
             dbRows,
             affectedMaterialsByReportType,
             importScope,
             screenUnitId,
         });
+
         const changes = this.buildReportFetchLikeChanges(
             flatChanges,
             materialById,
@@ -144,18 +156,8 @@ export class ExcelService {
         return this.buildResponse(changes, failures);
     }
 
-    private normalizeExcelRows(excelRows: ExcelImportBody["excelRows"]): NormalizedExcelRow[] {
-        return (excelRows ?? []).map((row) => ({
-            reportType: Number(row?.reportType),
-            unitSimul: String(row?.unitSimul ?? "").trim(),
-            materialId: String(row?.materialId ?? "").trim(),
-            quantity: Number(row?.quantity),
-            rowNumber: Number(row?.rowNumber),
-        }));
-    }
-
-    private combineDuplicateExcelRows(excelRows: NormalizedExcelRow[]): NormalizedExcelRow[] {
-        const rowsByKey = new Map<string, NormalizedExcelRow>();
+    private combineDuplicateExcelRows(excelRows: ValidExcelRow[]): ValidExcelRow[] {
+        const rowsByKey = new Map<string, ValidExcelRow>();
 
         for (const row of excelRows) {
             const rowKey = this.buildExcelDuplicateKey(row);
@@ -182,6 +184,9 @@ export class ExcelService {
                 description: material.description,
                 multiply: Number(material.multiply),
                 recordStatus: material.recordStatus,
+                unitOfMeasurement: material.unitOfMeasurement,
+                nickname: material.nickname,
+                materialCategory: material.materialCategory,
             });
         }
 
@@ -308,7 +313,7 @@ export class ExcelService {
                 errorMessage = MATERIAL_NOT_FOUND_MESSAGE;
             } else if (material.recordStatus !== RECORD_STATUS.ACTIVE) {
                 errorMessage = MATERIAL_INACTIVE_MESSAGE;
-            } else if (!(row.quantity > 0)) {
+            } else if (row.quantity < 0) {
                 errorMessage = QUANTITY_MUST_BE_POSITIVE_MESSAGE;
             } else if (!unit) {
                 errorMessage = UNIT_NOT_FOUND_MESSAGE;
@@ -343,7 +348,7 @@ export class ExcelService {
 
         return {
             validRows,
-            failures: failures.sort((left, right) => left.rowNumber - right.rowNumber),
+            failures: failures
         };
     }
 
@@ -531,9 +536,9 @@ export class ExcelService {
             id: materialId,
             description: material?.description ?? "",
             multiply: Number(material?.multiply ?? 0),
-            nickname: "",
-            category: "",
-            unitOfMeasure: "",
+            nickname: material?.nickname?.nickname ?? "",
+            category: material?.materialCategory?.mainCategory?.description ?? "",
+            unitOfMeasure: material?.unitOfMeasurement ?? "",
         };
     }
 

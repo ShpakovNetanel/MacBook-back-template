@@ -5,12 +5,13 @@ import { StandardTag } from "../standard-tag/standard-tag.model";
 import { UnitStandardTags } from "../unit-standard-tag/unit-standard-tag.model";
 import { UnitId } from "src/entities/unit-entities/unit-id/unit-id.model";
 import { Unit } from "src/entities/unit-entities/unit/unit.model";
+import { Op } from "sequelize";
 
 @Injectable()
 export class TagGroupRepository {
     constructor(@InjectModel(TagGroup) private readonly tagGroup: typeof TagGroup) { }
 
-    fetchAll() {
+    fetchAll(level: number) {
         return this.tagGroup.findAll({
             include: [{
                 model: StandardTag,
@@ -21,8 +22,11 @@ export class TagGroupRepository {
                         include: [{
                             model: Unit
                         }]
-                    }]
-                }]
+                    }],
+                }],
+                where: {
+                    unitLevel: { [Op.gte]: level }
+                }
             }]
         });
     }
