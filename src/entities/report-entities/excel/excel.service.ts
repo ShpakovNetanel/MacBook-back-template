@@ -439,6 +439,8 @@ export class ExcelService {
 
                     let currentParentId = importScope.parentByChild.get(baseUnitId);
                     while (currentParentId !== undefined) {
+                        if (currentParentId === screenUnitId) break;
+
                         this.upsertChange(
                             aggregatedChangeByKey,
                             reportType,
@@ -447,7 +449,6 @@ export class ExcelService {
                             quantity
                         );
 
-                        if (currentParentId === screenUnitId) break;
                         currentParentId = importScope.parentByChild.get(currentParentId);
                     }
                 }
