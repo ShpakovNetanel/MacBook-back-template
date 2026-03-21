@@ -70,17 +70,9 @@ export class ReportService {
             });
 
             const activeRelations = await this.unitHierarchyService.fetchActiveRelations(date) as UnitRelation[];
-            const emergencyUnitLookup = this.unitHierarchyService.buildEmergencyUnitLookup(activeRelations);
-            const { childrenByParent } = buildHierarchyIndexes(
-                activeRelations,
-                emergencyUnitLookup
-            );
-
-            const connectedUnitIds = collectHierarchyUnitIds(screenUnitId, childrenByParent);
-            const connectedUnitSet = new Set<number>(connectedUnitIds);
 
             const lowerUnitsIds = sortNumeric(
-                (childrenByParent.get(screenUnitId) ?? []).filter((unitId) => connectedUnitSet.has(unitId))
+                activeRelations.filter(reltion => reltion.dataValues.unitId === screenUnitId).map(unit => unit.dataValues.relatedUnitId)
             );
 
             assertLowerHierarchyStable(saveReportsBody.children, lowerUnitsIds);
