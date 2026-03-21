@@ -307,7 +307,7 @@ const upsertReports = (
     if(!aggregatedMaterials.length) return;
     
     const reportKey = `${unitId}::${parentUnit.id}::${reportType}`;
-    const { formattedTime } = formatDate(new Date());
+    const { formattedTime, timestamp } = formatDate(new Date());
 
     if (!reports[reportKey]) {
         reports[reportKey] = {
@@ -337,7 +337,7 @@ const upsertReports = (
                 reportedQuantity: Number(material.quantity),
                 confirmedQuantity: Number(material.quantity),
                 status,
-                modifiedAt: new Date(),
+                modifiedAt: timestamp,
                 changedAt: formattedTime,
                 changedBy: username,
             };
@@ -353,7 +353,7 @@ const upsertReports = (
                 reportedQuantity: Number(reportItem.confirmedQuantity),
                 confirmedQuantity: Number(reportItem.confirmedQuantity),
                 status: RECORD_STATUS.INACTIVE,
-                modifiedAt: new Date(),
+                modifiedAt: timestamp,
                 changedAt: formattedTime,
                 changedBy: username,
             };

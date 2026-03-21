@@ -20,7 +20,7 @@ export class ReportController {
     }
 
     @Get('favorites')
-    fetchFavoriteReports(@Req() request: Request){
+    fetchFavoriteReports(@Req() request: Request) {
         return this.service.fetchFavoriteReports(
             request['date'],
             Number(request.headers['unit'])
@@ -28,7 +28,7 @@ export class ReportController {
     }
 
     @Get('recentMaterials')
-    fetchMostRecentMaterials(@Req() request: Request){
+    fetchMostRecentMaterials(@Req() request: Request) {
         return this.service.fetchMostRecentMaterials(
             request['date'],
             Number(request.headers['unit'])
@@ -40,7 +40,7 @@ export class ReportController {
         @Req() request: Request) {
         return this.service.saveReportsChanges(
             saveReportsBody,
-            new Date(request['date']),
+            request['date'],
             Number(request.headers['unit']),
             request['username'],
         )

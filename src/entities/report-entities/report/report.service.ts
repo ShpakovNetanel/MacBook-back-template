@@ -48,28 +48,45 @@ export class ReportService {
 
     async saveReportsChanges(
         saveReportsBody: SaveReportsBody,
-        date: Date,
-        recipientUnitId: number,
+        date: string,
+        screenUnitId: number,
         username: string,
     ) {
         const changes = saveReportsBody?.changes ?? [];
-        const reportingUnitId = recipientUnitId;
+        const reportingUnitId = screenUnitId;
         const transaction = await this.sequelize.transaction();
-        const { formattedTime } = formatDate(new Date())
+        const { formattedTime } = formatDate(new Date());
+        const screenDate = new Date(date);
 
         try {
             const unitDetails = await this.unitDetailModel.findOne({
                 attributes: ["unitId", "unitLevelId", "startDate"],
                 where: {
                     unitId: reportingUnitId,
-                    startDate: { [Op.lte]: date },
-                    endDate: { [Op.gt]: date }
+                    startDate: { [Op.lte]: screenDate },
+                    endDate: { [Op.gt]: screenDate }
                 },
                 order: [["startDate", "DESC"]]
             });
 
+            const activeRelations = await this.unitHierarchyService.fetchActiveRelations(date) as UnitRelation[];
+            const emergencyUnitLookup = this.unitHierarchyService.buildEmergencyUnitLookup(activeRelations);
+            const { childrenByParent } = buildHierarchyIndexes(
+                activeRelations,
+                emergencyUnitLookup
+            );
+
+            const connectedUnitIds = collectHierarchyUnitIds(screenUnitId, childrenByParent);
+            const connectedUnitSet = new Set<number>(connectedUnitIds);
+
+            const lowerUnitsIds = sortNumeric(
+                (childrenByParent.get(screenUnitId) ?? []).filter((unitId) => connectedUnitSet.has(unitId))
+            );
+
+            assertLowerHierarchyStable(saveReportsBody.children, lowerUnitsIds);
+
             const parentByChild = await this.repository.fetchParentUnits(
-                date,
+                screenDate,
                 Array.from(new Set(changes.map(change => change.unitId)))
             );
 
@@ -77,8 +94,8 @@ export class ReportService {
                 changes,
                 reportingLevel: unitDetails?.dataValues.unitLevelId!,
                 reportingUnitId,
-                recipientUnitId,
-                createdOn: date,
+                recipientUnitId: screenUnitId,
+                createdOn: screenDate,
                 createdAt: formattedTime,
                 createdBy: username,
                 parentByChild
@@ -99,7 +116,7 @@ export class ReportService {
 
             await transaction.rollback();
             throw new BadGatewayException({
-                message: 'נכשלה פעולת השמירה, יש לנסות שוב',
+                message: error?.response?.message ?? 'נכשלה פעולת השמירה, יש לנסות שוב',
                 type: MESSAGE_TYPES.FAILURE
             })
         }
@@ -108,7 +125,7 @@ export class ReportService {
     async fetchReports(date: string, recipientUnitId: number): Promise<ReportDto[]> {
         const reports = await this.repository.fetchReportsData(date, recipientUnitId);
         const materialIds = this.collectMaterialIdsFromReports(reports);
-        
+
         const yesterdayInventoryReports = materialIds.length === 0
             ? []
             : await this.repository.fetchHierarchyReportsByType(
@@ -184,7 +201,7 @@ export class ReportService {
         try {
 
             const reports = await this.repository.fetchMostRecentReportsData(date, recipientUnitId);
-            
+
             return {
                 data: buildReportsMaterialsResponse({
                     recipientUnitId,
@@ -218,12 +235,12 @@ export class ReportService {
                 activeRelations,
                 emergencyUnitLookup
             );
-
-            const connectedUnitIds = collectHierarchyUnitIds(screenUnitId, childrenByParent);
-            const connectedUnitSet = new Set<number>(connectedUnitIds);
             const lowerUnitsIds = sortNumeric(
                 (childrenByParent.get(screenUnitId) ?? []).filter((unitId) => connectedUnitSet.has(unitId))
             );
+
+            const connectedUnitIds = collectHierarchyUnitIds(screenUnitId, childrenByParent);
+            const connectedUnitSet = new Set<number>(connectedUnitIds);
 
             assertLowerHierarchyStable(aggregatedReportsDTO.lowerUnitsIds ?? [], lowerUnitsIds);
 
