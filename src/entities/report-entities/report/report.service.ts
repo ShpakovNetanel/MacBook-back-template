@@ -227,12 +227,13 @@ export class ReportService {
                 activeRelations,
                 emergencyUnitLookup
             );
-            const lowerUnitsIds = sortNumeric(
-                (childrenByParent.get(screenUnitId) ?? []).filter((unitId) => connectedUnitSet.has(unitId))
-            );
 
             const connectedUnitIds = collectHierarchyUnitIds(screenUnitId, childrenByParent);
             const connectedUnitSet = new Set<number>(connectedUnitIds);
+            
+            const lowerUnitsIds = sortNumeric(
+                (childrenByParent.get(screenUnitId) ?? []).filter((unitId) => connectedUnitSet.has(unitId))
+            );
 
             assertLowerHierarchyStable(aggregatedReportsDTO.lowerUnitsIds ?? [], lowerUnitsIds);
 

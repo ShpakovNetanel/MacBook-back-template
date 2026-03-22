@@ -44,6 +44,7 @@ type ImportScope = {
     unitById: Map<number, HierarchyUnitSnapshot>;
     unitBySimul: Map<string, HierarchyUnitSnapshot>;
     parentByChild: Map<number, number>;
+    descendantUnitIds: number[];
     includedUnitIds: number[];
     lowerUnitIds: number[];
     gdudUnitIds: number[];
@@ -62,6 +63,7 @@ const MATERIAL_NOT_FOUND_MESSAGE = "המק\"ט לא קיים במערכת";
 const MATERIAL_INACTIVE_MESSAGE = "המק\"ט אינו פעיל";
 const QUANTITY_MUST_BE_POSITIVE_MESSAGE = "הכמות חייבת להיות גדולה מ-0";
 const UNIT_NOT_FOUND_MESSAGE = "היחידה לא קיימת במערכת";
+const SCREEN_ROWS_OUTSIDE_SCREEN_UNIT_MESSAGE = "נתוני המסך מכילים יחידות שאינן תחת יחידת המסך";
 const UNIT_OUTSIDE_OPEN_BRANCHES_MESSAGE = "היחידה אינה תחת הילדים הפתוחים של יחידת המסך";
 const UNIT_STATUS_INVALID_MESSAGE = "היחידה חייבת להיות בסטטוס ממתין להקצאה";
 const INVENTORY_USAGE_LEVEL_MESSAGE = "עבור מלאי ושימוש ניתן לייבא רק יחידות ברמת גדוד";
@@ -111,7 +113,16 @@ export class ExcelService {
 
         const materialById = this.buildMaterialByIdMap(materials as unknown as MaterialImportRow[]);
         const importScope = this.buildImportScope(screenUnitId, unitLookupRows, activeRelations);
-        const screenUnit = importScope.unitById.get(screenUnitId)!;
+        const screenUnit = importScope.unitById.get(screenUnitId);
+
+        if (!screenUnit) {
+            throw new BadRequestException({
+                message: SCREEN_UNIT_NOT_FOUND_MESSAGE,
+                type: MESSAGE_TYPES.FAILURE,
+            });
+        }
+
+        this.validateScreenRows(screenRows, importScope, screenUnitId);
 
         const { validRows, failures } = this.validateExcelRows(
             excelRows,
@@ -236,6 +247,21 @@ export class ExcelService {
             );
         }
 
+        const descendantUnitIds = new Set<number>();
+        const descendantQueue = [...this.sortNumeric(childrenByParent.get(screenUnitId) ?? [])];
+
+        while (descendantQueue.length > 0) {
+            const currentUnitId = descendantQueue.shift();
+            if (currentUnitId === undefined || descendantUnitIds.has(currentUnitId)) continue;
+
+            descendantUnitIds.add(currentUnitId);
+
+            for (const childUnitId of childrenByParent.get(currentUnitId) ?? []) {
+                if (descendantUnitIds.has(childUnitId)) continue;
+                descendantQueue.push(childUnitId);
+            }
+        }
+
         const directChildIds = this.sortNumeric(childrenByParent.get(screenUnitId) ?? []);
         const openDirectChildIds = directChildIds.filter(
             (childUnitId) => (unitById.get(childUnitId)?.statusId ?? 0) === UNIT_STATUSES.WAITING_FOR_ALLOCATION
@@ -286,10 +312,31 @@ export class ExcelService {
             unitById,
             unitBySimul,
             parentByChild,
+            descendantUnitIds: this.sortNumeric(Array.from(descendantUnitIds)),
             includedUnitIds: includedUnitIdsSorted,
             lowerUnitIds,
             gdudUnitIds,
         };
+    }
+
+    private validateScreenRows(
+        screenRows: NormalizedScreenRow[],
+        importScope: ImportScope,
+        screenUnitId: number
+    ) {
+        const descendantUnitIds = new Set(importScope.descendantUnitIds);
+        const invalidUnitIds = this.sortNumeric(Array.from(new Set(
+            screenRows
+                .map((row) => row.unitId)
+                .filter((unitId) => !descendantUnitIds.has(unitId) || unitId === screenUnitId)
+        )));
+
+        if (invalidUnitIds.length === 0) return;
+
+        throw new BadRequestException({
+            message: `${SCREEN_ROWS_OUTSIDE_SCREEN_UNIT_MESSAGE}: ${invalidUnitIds.join(", ")}`,
+            type: MESSAGE_TYPES.FAILURE,
+        });
     }
 
     private validateExcelRows(
