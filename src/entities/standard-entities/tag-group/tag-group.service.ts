@@ -22,8 +22,13 @@ export class TagGroupService {
                 units: tag.unitStandardTags.map(unitStandardTag => ({
                     id: unitStandardTag.Unit.activeDetail?.dataValues.unitId,
                     description: unitStandardTag.Unit.activeDetail?.dataValues.description
-                }))
-            }))
+                })).sort((a, b) => a.description!.localeCompare(b.description!))
+            })).sort((a, b) => {
+                if (a.unitLevel === b.unitLevel)
+                    return a.description.localeCompare(b.description)
+
+                return a.unitLevel - b.unitLevel
+            })
         })).sort((a, b) => a.description.localeCompare(b.description));
     }
 

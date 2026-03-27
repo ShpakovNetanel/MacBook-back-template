@@ -266,7 +266,7 @@ export class ReportRepository {
             date,
             reportingUnitIds: unitIds,
             material,
-            itemStatuses: [RECORD_STATUS.ACTIVE, RECORD_STATUS.INACTIVE]
+            itemStatuses: [RECORD_STATUS.ACTIVE]
         });
     }
 

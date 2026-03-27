@@ -230,7 +230,7 @@ export class ReportService {
 
             const connectedUnitIds = collectHierarchyUnitIds(screenUnitId, childrenByParent);
             const connectedUnitSet = new Set<number>(connectedUnitIds);
-            
+
             const lowerUnitsIds = sortNumeric(
                 (childrenByParent.get(screenUnitId) ?? []).filter((unitId) => connectedUnitSet.has(unitId))
             );
@@ -246,7 +246,7 @@ export class ReportService {
                 unitsMap,
                 resolveUnit
             );
-            
+
             const dbReports = await this.repository.fetchReportsDataForUnits(
                 date,
                 connectedUnitIds
@@ -270,7 +270,7 @@ export class ReportService {
             await transaction.commit();
 
             return {
-                type: MESSAGE_TYPES.SUCCESS,
+                type: isEmptyish(reportsToSave) ? MESSAGE_TYPES.WARNING : MESSAGE_TYPES.SUCCESS,
                 message: isEmptyish(reportsToSave) ? 'אין דיווחים להעלות' : 'הדיווחים הועלו בהצלחה',
             };
         } catch (error) {
