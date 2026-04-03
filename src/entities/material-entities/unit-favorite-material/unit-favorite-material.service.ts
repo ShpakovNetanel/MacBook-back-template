@@ -9,35 +9,25 @@ export class UnitFavoriteMaterialService {
 
     async create(unitFavoriteMaterial: CreateUnitFavoriteMaterial) {
         try {
-            await this.repository.create(unitFavoriteMaterial);
-            return {
-                message: `המק״ט ${unitFavoriteMaterial.materialId} נשמר למועדפים בהצלחה`,
-                type: MESSAGE_TYPES.SUCCESS
-            }
+            return await this.repository.create(unitFavoriteMaterial);
         } catch (error) {
             console.log(error);
-
-            throw new BadGatewayException({
-                message: `שמירת המק״ט ${unitFavoriteMaterial.materialId} למועדפים נכשלה, יש לנסות שנית`,
-                type: MESSAGE_TYPES.FAILURE
-            })
         }
     }
 
     async destroy(unitFavoriteMaterial: DeleteUnitFavoriteMaterial) {
         try {
-            await this.repository.destroy(unitFavoriteMaterial);
+            const deletedCount = await this.repository.destroy(unitFavoriteMaterial);
+
             return {
-                message: `המק״ט ${unitFavoriteMaterial.materialId} הוסר מהמועדפים`,
-                type: MESSAGE_TYPES.SUCCESS
-            }
+                data: { deletedCount },
+            };
         } catch (error) {
             console.log(error);
-
             throw new BadGatewayException({
-                message: `מחיקת המק״ט ${unitFavoriteMaterial.materialId} מהמועדפים נכשלה, יש לנסות שנית`,
+                message: 'מחיקת חומר מועדף נכשלה, יש לנסות שוב',
                 type: MESSAGE_TYPES.FAILURE
-            })
+            });
         }
     }
 }

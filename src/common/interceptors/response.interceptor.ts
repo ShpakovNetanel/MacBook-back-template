@@ -35,14 +35,15 @@ const splitMessageAndData = (
 ): { data: unknown; message: string; type: string } | null => {
   if (!value || typeof value !== "object") return null;
   const asRecord = value as Record<string, unknown>;
-  if (!("data" in asRecord) || !("message" in asRecord) || !("type" in asRecord)) return null;
+  if (!("message" in asRecord) || !("type" in asRecord)) return null;
   const message = asRecord.message;
   if (typeof message !== "string") return null;
   const type = asRecord.type;
   if (typeof type !== "string") return null;
   const keys = Object.keys(asRecord);
-  if (keys.length > 3) return null;
-  return { data: asRecord.data, message, type };
+  const validKeys = keys.every((key) => ["data", "message", "type"].includes(key));
+  if (!validKeys) return null;
+  return { data: asRecord.data ?? [], message, type };
 };
 
 @Injectable()
@@ -51,8 +52,6 @@ export class ResponseInterceptor implements NestInterceptor {
     const httpResponse = context.switchToHttp().getResponse();
     return next.handle().pipe(
       map((data) => {
-        if (!isDefined(data?.data)) data.data = [];
-
         if (isResponseShape(data)) return data;
         const split = splitMessageAndData(data);
 
@@ -60,7 +59,7 @@ export class ResponseInterceptor implements NestInterceptor {
           success: true,
           statusCode: httpResponse?.statusCode ?? 200,
           body: {
-            data: split ? split.data : data ?? [],
+            data: split ? split.data : isDefined(data) ? data : [],
             message: split?.message ?? "OK",
             ...(split ? { type: split.type } : {}),
           },
