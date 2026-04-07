@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { REPORT_TYPES, UNIT_STATUSES } from "src/constants";
 import { ReportRepository } from "src/entities/report-entities/report/report.repository";
 import { Report } from "src/entities/report-entities/report/report.model";
@@ -31,8 +31,6 @@ type LiveMaterialData = {
 
 @Injectable()
 export class StandardService {
-    private readonly logger = new Logger(StandardService.name);
-
     constructor(
         private readonly standardRepository: StandardRepository,
         private readonly reportRepository: ReportRepository,
@@ -52,8 +50,7 @@ export class StandardService {
         const allStandards = await this.standardRepository.getStandardsForItemGroups(allGroupIds);
         const ancestorManagedStandards = allStandards.filter(s => ancestorIds.has(s.managingUnit));
 
-        const allUnitIdsForTags = Array.from(new Set([...allAncestorIds]));
-        const unitTagsByUnit = await this.standardRepository.getUnitStandardTags(allUnitIdsForTags);
+        const unitTagsByUnit = await this.standardRepository.getUnitStandardTags(allAncestorIds);
         const relevantStandards = this.filterRelevantStandards(ancestorManagedStandards, allAncestorIds, unitTagsByUnit);
 
         const groupToMaterialMap = await this.standardRepository.getAllGroupToMaterialMappings();

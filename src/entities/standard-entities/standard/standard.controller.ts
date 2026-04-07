@@ -9,19 +9,13 @@ export class StandardController {
     @Get("tool-material-ids")
     getToolMaterialIds(@Req() request: Request): Promise<string[]> {
         const unitId = Number(request.headers["unit"]);
-        const reqDate = request["date"];
-        return this.service.getRelevantToolMaterialIds(unitId, reqDate);
+        return this.service.getRelevantToolMaterialIds(unitId, request["date"]);
     }
 
     @Get("")
     getStandard(@Req() request: Request): Promise<StandardDrawerDataDto[]> {
         const unitId = Number(request.headers["unit"]);
-        const reqDate = request["date"];
-        console.log(`[StandardController] Received request for unit: ${unitId} (raw: ${request.headers["unit"]}), date: ${reqDate} (raw: ${request.headers["screendate"]})`);
-
-        return this.service.getStandardDrawerData(
-            unitId,
-            reqDate,
-        );
+        return this.service.getStandardDrawerData(unitId, request["date"]);
     }
 }
+
