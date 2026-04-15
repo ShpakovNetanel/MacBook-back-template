@@ -38,7 +38,7 @@ const sequelizeInitializer = (configService: ConfigService) =>
                 timezone: 'Asia/Jerusalem',
                 autoLoadModels: true,
                 synchronize: false,
-                logging: console.log,
+                logging: false,
             })
         }),
         ...modules
