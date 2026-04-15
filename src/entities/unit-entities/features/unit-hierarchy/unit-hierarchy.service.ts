@@ -48,7 +48,7 @@ export class UnitHierarchyService {
 
       if (!isDefined(rootUnit)) {
         throw new BadGatewayException({
-          message: 'אינך מקושר ליחידה אריחכגונית',
+          message: 'אינך מקושר ליחידה ארגונית',
           type: 'Fatal'
         })
       }
