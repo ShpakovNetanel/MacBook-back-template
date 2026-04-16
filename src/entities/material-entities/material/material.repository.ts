@@ -63,7 +63,7 @@ export class MaterialRepository {
             where: {
                 id: { [Op.in]: materialIds },
                 centerId: SUPPLY_CENTERS.AMMO,
-                type: MATERIAL_TYPES.ITEM
+                type: MATERIAL_TYPES.ITEM || MATERIAL_TYPES.TOOL
             }
         });
     }
@@ -95,7 +95,7 @@ export class MaterialRepository {
                     { description: { [Op.iLike]: `%${filter}%` } }
                 ],
                 recordStatus: RECORD_STATUS.ACTIVE,
-                type: MATERIAL_TYPES.ITEM,
+                type: { [Op.or]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL] },
                 centerId: SUPPLY_CENTERS.AMMO
             },
         });

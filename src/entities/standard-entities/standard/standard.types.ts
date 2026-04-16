@@ -25,6 +25,7 @@ export type StandardOriginDto = {
     item_group_id: string;
     tool_group_id: string | null;
     tool_group_name: string | null;
+    tool_material_ids: string[];
     tool_quantity: number | null;
     per_tool_qty: number | null;
     tags: { level: number; tag: string }[];

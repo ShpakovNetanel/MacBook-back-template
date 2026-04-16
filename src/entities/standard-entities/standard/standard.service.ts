@@ -207,7 +207,7 @@ export class StandardService {
                     finalStandardQuan = baseStandardQuan * toolQuan;
                 }
 
-                const origins = this.buildOrigins(standard, baseStandardQuan, toolQuan);
+                const origins = this.buildOrigins(standard, baseStandardQuan, toolQuan, groupToMaterialMap);
 
                 results.push({
                     unitId,
@@ -449,14 +449,19 @@ export class StandardService {
         standard: RelevantStandard,
         baseQuan: number,
         toolCount: number | null,
+        groupToMaterialMap: Map<string, string[]>,
     ): StandardOriginDto[] {
         const totalQuan = toolCount !== null ? baseQuan * toolCount : baseQuan;
+        const toolMaterialIds = standard.toolGroupId
+            ? (groupToMaterialMap.get(standard.toolGroupId) ?? [])
+            : [];
         return [{
             standard_attribute_id: standard.standardId,
             managing_unit: String(standard.managingUnit),
             item_group_id: standard.itemGroupId,
             tool_group_id: standard.toolGroupId,
             tool_group_name: standard.toolGroupName,
+            tool_material_ids: toolMaterialIds,
             tool_quantity: toolCount,
             per_tool_qty: baseQuan ?? null,
             tags: standard.values.map(v => ({ level: v.tagLevel, tag: v.tag })),
