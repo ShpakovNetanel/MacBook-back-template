@@ -26,6 +26,29 @@ export type DownloadAllocationsDTO = {
     materialId?: string;
 };
 
+export type AllocationDuhExportRowDto = {
+    materialId: string;
+    materialDescription: string;
+    quantity: number;
+    unitOfMeasure: string;
+    unitLevelId: number;
+    unitSimul: string;
+    unitDescription: string;
+};
+
+export type AllocationDuhGroupConversionDto = {
+    groupId: string;
+    groupDescription: string;
+    materialId: string;
+    materialDescription: string;
+};
+
+export type AllocationDuhExportDto = {
+    fileName: string;
+    rows: AllocationDuhExportRowDto[];
+    groupConversions: AllocationDuhGroupConversionDto[];
+};
+
 export type AggregateReportsDTO = {
     unitsIds: number[];
     lowerUnitsIds: number[];

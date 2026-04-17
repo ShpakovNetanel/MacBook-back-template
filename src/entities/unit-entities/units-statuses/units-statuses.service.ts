@@ -28,14 +28,16 @@ export class UnitStatusService {
             }
 
             const statusesToSave = targetUnitIds.map(unitId => ({
-                    unitId,
-                    unitStatusId: unitsStatuses.statusId,
-                    date: new Date(date)
-                }));
+                unitId,
+                unitStatusId: unitsStatuses.statusId,
+                date: new Date(date)
+            }));
 
-            return this.repository.updateStatuses(statusesToSave, transaction);
+            await this.repository.updateStatuses(statusesToSave, transaction);
+            await transaction.commit();
         } catch (error) {
             console.log(error);
+            await transaction.rollback();
         }
     }
 }

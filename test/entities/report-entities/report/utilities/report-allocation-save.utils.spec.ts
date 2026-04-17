@@ -99,6 +99,7 @@ describe("report-allocation-save utils", () => {
                 recipientUnitId: 1,
                 items: [{ materialId: "A", confirmedQuantity: 20 }],
             }] as any,
+            isDvhExcel: false
         });
 
         expect(changes).toEqual([{

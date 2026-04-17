@@ -36,26 +36,29 @@ export class MaterialService {
         }
 
         const materialResults = materials.map(material => ({
-                ...material.dataValues,
-                unitOfMeasure: material.dataValues.unitOfMeasurement,
-                multiply: Number(material.dataValues.multiply),
-                category: material.materialCategory?.mainCategory?.dataValues.description,
-                nickname: material.nickname?.nickname ?? "",
-                type: MATERIAL_TYPES.ITEM,
-                favorite: !isEmptyish(material.unitFavorites ?? []),
-                comment: commentByMaterial.get(material.id) ?? null
-            }));
+            ...material.dataValues,
+            unitOfMeasure: material.dataValues.unitOfMeasurement,
+            multiply: Number(material.dataValues.multiply),
+            category: material.materialCategory?.mainCategory?.dataValues.description,
+            nickname: material.nickname?.nickname ?? "",
+            type: MATERIAL_TYPES.ITEM,
+            favorite: !isEmptyish(material.unitFavorites ?? []),
+            comment: commentByMaterial.get(material.id) ?? null
+        }));
         const standardGroupResults: Array<Record<string, any>> = standardGroups.map((group) => ({
-                id: group.id,
-                description: group.name,
-                favorite: favoriteIds.has(group.id),
-                type: MATERIAL_TYPES.TOOL,
-                category: 'קבוצה',
-                nickname: "",
-                unitOfMeasure: null,
-                multiply: 0,
-                comment: null
-            }));
+            id: group.id,
+            description: group.name,
+            favorite: favoriteIds.has(group.id),
+            type: MATERIAL_TYPES.TOOL,
+            category: group.groupType === MATERIAL_TYPES.ITEM
+                ? 'קבוצת מק״טים'
+                : group.groupType === MATERIAL_TYPES.TOOL
+                    ? 'קבוצת כלים' : '',
+            nickname: "",
+            unitOfMeasure: null,
+            multiply: 0,
+            comment: null
+        }));
 
         return [...materialResults, ...standardGroupResults]
             .sort((a, b) => {
@@ -75,24 +78,24 @@ export class MaterialService {
         );
 
         const materialResults = materials.map(material => ({
-                ...material.dataValues,
-                unitOfMeasure: material.dataValues.unitOfMeasurement,
-                multiply: Number(material.dataValues.multiply),
-                category: material.materialCategory?.mainCategory?.dataValues.description,
-                nickname: material.nickname?.nickname ?? "",
-                type: MATERIAL_TYPES.ITEM,
-                favorite: !isEmptyish(material.unitFavorites ?? []),
-            }));
+            ...material.dataValues,
+            unitOfMeasure: material.dataValues.unitOfMeasurement,
+            multiply: Number(material.dataValues.multiply),
+            category: material.materialCategory?.mainCategory?.dataValues.description,
+            nickname: material.nickname?.nickname ?? "",
+            type: MATERIAL_TYPES.ITEM,
+            favorite: !isEmptyish(material.unitFavorites ?? []),
+        }));
         const standardGroupResults: Array<Record<string, any>> = standardGroups.map((group) => ({
-                id: group.id,
-                description: group.name,
-                favorite: favoriteIds.has(group.id),
-                type: MATERIAL_TYPES.TOOL,
-                category: 'קבוצה',
-                nickname: "",
-                unitOfMeasure: null,
-                multiply: 0,
-            }));
+            id: group.id,
+            description: group.name,
+            favorite: favoriteIds.has(group.id),
+            type: MATERIAL_TYPES.TOOL,
+            category: 'קבוצה',
+            nickname: "",
+            unitOfMeasure: null,
+            multiply: 0,
+        }));
 
         return [...materialResults, ...standardGroupResults]
             .sort((a, b) => {

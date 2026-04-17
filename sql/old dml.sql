@@ -1215,6 +1215,10 @@ INSERT INTO public.UnitIds (id) VALUES
     (999),
     (1000);
 
+INSERT INTO public.TsavIrgunCodes (id, description, record_status)
+SELECT id::character varying(10), CONCAT('סימול ', id), 'ACTIVE'
+FROM public.UnitIds;
+
 INSERT INTO public.Units (id, unit_type, description, level_id, unit_type_id, start_date, end_date) VALUES
     (1, 'O', 'יחידה 1', 0, 1, '2020-01-01', '2099-12-31'),
     (2, 'O', 'יחידה 2', 1, 2, '2020-01-01', '2099-12-31'),
@@ -2216,6 +2220,9 @@ INSERT INTO public.Units (id, unit_type, description, level_id, unit_type_id, st
     (998, 'O', 'יחידה 998', 4, 5, '2020-01-01', '2099-12-31'),
     (999, 'O', 'יחידה 999', 4, 5, '2020-01-01', '2099-12-31'),
     (1000, 'O', 'יחידה 1000', 4, 5, '2020-01-01', '2099-12-31');
+
+UPDATE public.Units
+SET tsav_irgun_code = id::character varying(10);
 
 INSERT INTO public.UnitRelations (unit_id, unit_type, related_unit_id, related_unit_type, unit_relation_id, start_date, end_date) VALUES
     (1, 'O', 2, 'O', '1', '2020-01-01', '2099-12-31'),

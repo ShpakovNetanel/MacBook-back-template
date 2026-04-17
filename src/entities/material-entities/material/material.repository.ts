@@ -114,17 +114,20 @@ export class MaterialRepository {
                 },
                 order: [["date", "DESC"]]
             });
-        const standardGroups = Number(tab) === REPORT_TYPES.INVENTORY
-            ? await this.standardGroupModel.findAll({
-                where: {
-                    [Op.or]: [
-                        { id: { [Op.iLike]: `%${filter}%` } },
-                        { name: { [Op.iLike]: `%${filter}%` } }
-                    ],
-                    groupType: MATERIAL_TYPES.TOOL
+        const standardGroups = await this.standardGroupModel.findAll({
+            where: {
+                [Op.or]: [
+                    { id: { [Op.iLike]: `%${filter}%` } },
+                    { name: { [Op.iLike]: `%${filter}%` } }
+                ],
+                groupType: {
+                    [Op.in]: Number(tab) === REPORT_TYPES.INVENTORY
+                        ? [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
+                        : [MATERIAL_TYPES.ITEM]
                 }
-            })
-            : [];
+            }
+        });
+
         const favoriteIds = await this.fetchFavoriteIds(unitId);
 
         return {
@@ -162,14 +165,17 @@ export class MaterialRepository {
                 centerId: SUPPLY_CENTERS.AMMO
             },
         });
-        const standardGroups = Number(tab) === 1
-            ? await this.standardGroupModel.findAll({
-                where: {
+        const standardGroups = await this.standardGroupModel.findAll({
+            where: {
+                id: { [Op.in]: materialsIds },
+                groupType: {
                     id: { [Op.in]: materialsIds },
-                    groupType: MATERIAL_TYPES.TOOL
+                    [Op.in]: Number(tab) === REPORT_TYPES.INVENTORY
+                        ? [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
+                        : [MATERIAL_TYPES.ITEM]
                 }
-            })
-            : [];
+            }
+        })
         const favoriteIds = await this.fetchFavoriteIds(unitId);
 
         return {

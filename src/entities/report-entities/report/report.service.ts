@@ -7,8 +7,10 @@ import { formatDate, getPreviousCalendarDate } from "../../../utils/date";
 import { UnitHierarchyService } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.service";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
 import { UnitRepository } from "../../unit-entities/unit/unit.repository";
-import { ReportRepository } from "./report.repository";
+import type { Report } from "./report.model";
+import { ReportRepository, type StandardGroupMaterialRow } from "./report.repository";
 import {
+    AllocationDuhExportDto,
     AggregateReportsDTO,
     FavoriteReportDto,
     InventoryCalculationResultDto,
@@ -50,6 +52,19 @@ import {
     collectMaterialIdsFromReports,
     collectUnitsForLockedDirectChildBranches,
 } from "./utilities/report-service.utils";
+
+type AllocationExportUnitRow = {
+    description: string;
+    simul: string;
+    unitLevelId: number;
+};
+
+type AllocationExportMaterialRow = {
+    materialId: string;
+    materialDescription: string;
+    unitOfMeasure: string;
+    standardGroupId?: string;
+};
 
 @Injectable()
 export class ReportService {
@@ -408,6 +423,187 @@ export class ReportService {
         }
     }
 
+    private buildAllocationDuhUnitMap(directChildRelations: UnitRelation[]): Map<number, AllocationExportUnitRow> {
+        const unitById = new Map<number, AllocationExportUnitRow>();
+
+        for (const relation of directChildRelations) {
+            if (unitById.has(relation.relatedUnitId)) continue;
+
+            const detail = relation.relatedUnit?.activeDetail;
+            if (!detail) continue;
+
+            unitById.set(relation.relatedUnitId, {
+                description: detail.description ?? "",
+                simul: detail.tsavIrgunCodeId ?? "",
+                unitLevelId: detail.unitLevelId ?? UNIT_LEVELS.MATKAL,
+            });
+        }
+
+        return unitById;
+    }
+
+    private buildAllocationDuhSourceMaterialMap(
+        reports: Report[],
+        useRecipientUnitId: boolean
+    ): Map<string, AllocationExportMaterialRow> {
+        const materialByUnitMaterial = new Map<string, AllocationExportMaterialRow>();
+
+        for (const report of reports) {
+            const targetUnitId = useRecipientUnitId
+                ? report.recipientUnitId
+                : report.unitId;
+
+            if (targetUnitId === null) continue;
+
+            for (const item of report.items ?? []) {
+                const key = `${targetUnitId}:${item.materialId}`;
+                if (materialByUnitMaterial.has(key)) continue;
+
+                materialByUnitMaterial.set(key, {
+                    materialId: item.materialId,
+                    materialDescription: item.material?.description ?? item.standardGroup?.name ?? "",
+                    unitOfMeasure: item.material?.unitOfMeasurement ?? "",
+                    standardGroupId: item.standardGroup?.id,
+                });
+            }
+        }
+
+        return materialByUnitMaterial;
+    }
+
+    private async buildAllocationDuhExport({
+        date,
+        allocationChanges,
+        directChildRelations,
+        outgoingAllocationReports,
+        requisitionReports,
+    }: {
+        date: string;
+        allocationChanges: SaveAllocationsDTO["changes"];
+        directChildRelations: UnitRelation[];
+        outgoingAllocationReports: Report[];
+        requisitionReports: Report[];
+    }): Promise<AllocationDuhExportDto | null> {
+        if (allocationChanges.length === 0) {
+            return null;
+        }
+
+        const unitById = this.buildAllocationDuhUnitMap(directChildRelations);
+        const useOutgoingReports = outgoingAllocationReports.length > 0;
+        const sourceMaterialByUnitMaterial = this.buildAllocationDuhSourceMaterialMap(
+            useOutgoingReports ? outgoingAllocationReports : requisitionReports,
+            useOutgoingReports
+        );
+
+        const standardGroupIds = Array.from(new Set(
+            Array.from(sourceMaterialByUnitMaterial.values())
+                .map((material) => material.standardGroupId)
+                .filter((groupId): groupId is string => !isEmptyish(groupId))
+        ));
+
+        const standardGroupMaterials = await this.repository.fetchStandardGroupMaterials(standardGroupIds);
+        const standardGroupMaterialsByGroupId = new Map<string, StandardGroupMaterialRow[]>();
+
+        for (const mapping of standardGroupMaterials) {
+            standardGroupMaterialsByGroupId.set(mapping.groupId, [
+                ...(standardGroupMaterialsByGroupId.get(mapping.groupId) ?? []),
+                mapping,
+            ]);
+        }
+
+        const rows = allocationChanges.flatMap((change) => {
+            const unit = unitById.get(change.unitId);
+            const material = sourceMaterialByUnitMaterial.get(`${change.unitId}:${change.materialId}`);
+
+            if (!unit || !material) {
+                return [];
+            }
+
+            const standardGroupMappings = material.standardGroupId
+                ? standardGroupMaterialsByGroupId.get(material.standardGroupId) ?? []
+                : [];
+            const oneToOneGroupMaterial = standardGroupMappings.length === 1
+                ? standardGroupMappings[0]
+                : null;
+
+            return [{
+                materialId: oneToOneGroupMaterial?.materialId ?? material.materialId,
+                materialDescription: oneToOneGroupMaterial?.materialDescription ?? material.materialDescription,
+                quantity: Number(change.quantity ?? 0),
+                unitOfMeasure: oneToOneGroupMaterial?.unitOfMeasurement ?? material.unitOfMeasure,
+                unitLevelId: unit.unitLevelId,
+                unitSimul: unit.simul,
+                unitDescription: unit.description,
+            }];
+        });
+
+        if (rows.length === 0) {
+            return null;
+        }
+
+        return {
+            fileName: `נתוני דו״ה ${date}.xlsx`,
+            rows,
+            groupConversions: standardGroupMaterials.map((mapping) => ({
+                groupId: mapping.groupId,
+                groupDescription: mapping.groupDescription,
+                materialId: mapping.materialId,
+                materialDescription: mapping.materialDescription,
+            })),
+        };
+    }
+
+    async fetchAllocationDuhExport(
+        date: string,
+        screenUnitId: number,
+        materialId?: string,
+    ): Promise<AllocationDuhExportDto | null> {
+        const unitDetails = await this.unitRepository.fetchActiveUnitDetails(date, screenUnitId);
+
+        if (!unitDetails || unitDetails.unitLevelId !== UNIT_LEVELS.MATKAL) {
+            throw new BadRequestException({
+                message: "אקסל הקצאה דו״ה זמין רק ברמת מטכ״ל",
+                type: MESSAGE_TYPES.FAILURE,
+            });
+        }
+
+        const directChildRelations = await this.unitHierarchyService.fetchLowerUnits(date, screenUnitId) as UnitRelation[];
+        const directChildIds = sortNumeric(directChildRelations.map((relation) => relation.relatedUnitId));
+
+        const [outgoingAllocationReports, requisitionReports] = await Promise.all([
+            this.repository.fetchOutgoingAllocationReports(
+                date,
+                screenUnitId,
+                directChildIds,
+                materialId ? [materialId] : []
+            ),
+            directChildIds.length === 0
+                ? Promise.resolve([])
+                : this.repository.fetchReportsForRecipientsByType(
+                    date,
+                    REPORT_TYPES.REQUEST,
+                    [screenUnitId],
+                    directChildIds,
+                    materialId ? [materialId] : []
+                )
+        ]);
+
+        const allocationChanges = buildDownloadAllocationChanges({
+            isMatkal: true,
+            outgoingAllocationReports,
+            requisitionReports,
+            isDvhExcel: true
+        });
+
+        return this.buildAllocationDuhExport({
+            date,
+            allocationChanges,
+            directChildRelations,
+            outgoingAllocationReports,
+            requisitionReports,
+        });
+    }
+
     async saveAllocations(
         saveAllocationsDTO: SaveAllocationsDTO,
         date: string,
@@ -463,33 +659,46 @@ export class ReportService {
             const childIdsByParent = buildChildIdsByParent(activeRelations);
             const unitLevelById = buildUnitLevelById(activeRelations);
             const directChildIds = sortNumeric(childIdsByParent.get(screenUnitId) ?? []);
+            const directChildRelations = activeRelations.filter((relation) => relation.unitId === screenUnitId);
 
-            const currentOutgoingAllocationReports = await this.repository.fetchOutgoingAllocationReports(
-                date,
-                screenUnitId,
-                directChildIds,
-                materialId ? [materialId] : []
-            );
-
-            const matkalRequisitionReports = unitDetails?.unitLevelId === UNIT_LEVELS.MATKAL
-                ? await this.repository.fetchReportsForRecipientsByType(
+            const [existingMatkalOutgoingAllocationReports, currentOutgoingAllocationReports, matkalRequisitionReports] = await Promise.all([
+                unitDetails?.unitLevelId === UNIT_LEVELS.MATKAL
+                    ? this.repository.fetchOutgoingAllocationReports(
+                        date,
+                        screenUnitId,
+                        directChildIds
+                    )
+                    : Promise.resolve([]),
+                this.repository.fetchOutgoingAllocationReports(
                     date,
-                    REPORT_TYPES.REQUEST,
-                    [screenUnitId],
+                    screenUnitId,
                     directChildIds,
                     materialId ? [materialId] : []
-                )
-                : [];
+                ),
+                unitDetails?.unitLevelId === UNIT_LEVELS.MATKAL && directChildIds.length > 0
+                    ? this.repository.fetchReportsForRecipientsByType(
+                        date,
+                        REPORT_TYPES.REQUEST,
+                        [screenUnitId],
+                        directChildIds,
+                        materialId ? [materialId] : []
+                    )
+                    : Promise.resolve([])
+            ]);
 
             const allocationChanges = buildDownloadAllocationChanges({
                 isMatkal: unitDetails?.unitLevelId === UNIT_LEVELS.MATKAL,
                 outgoingAllocationReports: currentOutgoingAllocationReports,
                 requisitionReports: matkalRequisitionReports,
+                isDvhExcel: false
             });
+            const shouldReturnInitialMatkalDuhExport = unitDetails?.unitLevelId === UNIT_LEVELS.MATKAL
+                && existingMatkalOutgoingAllocationReports.length === 0;
 
             if (allocationChanges.length === 0) {
                 await transaction.commit();
                 return {
+                    data: null,
                     type: MESSAGE_TYPES.WARNING,
                     message: "אין הקצאות להורדה"
                 };
@@ -555,10 +764,23 @@ export class ReportService {
                 fieldsToUpdate: ["reportedQuantity"],
             });
 
+            const allocationDuhExport = shouldReturnInitialMatkalDuhExport
+                ? await this.buildAllocationDuhExport({
+                    date,
+                    allocationChanges,
+                    directChildRelations,
+                    outgoingAllocationReports: currentOutgoingAllocationReports,
+                    requisitionReports: matkalRequisitionReports,
+                })
+                : null;
+
             await transaction.commit();
             return {
+                data: {
+                    allocationDuhExport,
+                },
                 type: MESSAGE_TYPES.SUCCESS,
-                message: "הקצאות הורדו בהצלחה"
+                message: "הקצאות הורדו בהצלחה",
             };
         } catch (error: any) {
             await transaction.rollback();

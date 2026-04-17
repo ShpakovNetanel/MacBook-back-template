@@ -99,35 +99,41 @@ export const buildAllocationChangesFromRequisitionReports = (requisitionReports:
 
             const quantity = toNumber(item.confirmedQuantity ?? item.reportedQuantity);
 
-            const key = `${report.unitId}:${item.materialId}`;
-            changesByKey.set(key, {
-                unitId: report.unitId,
-                materialId: item.materialId,
-                quantity,
-            });
+            if (quantity !== 0) {
+                const key = `${report.unitId}:${item.materialId}`;
+                changesByKey.set(key, {
+                    unitId: report.unitId,
+                    materialId: item.materialId,
+                    quantity,
+                });
+            }
         }
     }
 
     return Array.from(changesByKey.values());
 };
 
-export const buildAllocationChangesFromReports = (reports: Report[]): AllocationChange[] => {
+export const buildAllocationChangesFromReports = (reports: Report[], isDvhExcel: boolean): AllocationChange[] => {
     const changesByKey = new Map<string, AllocationChange>();
 
     for (const report of reports) {
         for (const item of report.items ?? []) {
             if (!item.materialId || report.recipientUnitId === null) continue;
 
-            const quantity = toNumber(item.reportedQuantity);
+            const quantity = isDvhExcel
+                ? toNumber(item.confirmedQuantity)
+                : toNumber(item.reportedQuantity);
 
-            const key = `${report.recipientUnitId}:${item.materialId}`;
-            changesByKey.set(key, {
-                unitId: report.recipientUnitId,
-                materialId: item.materialId,
-                quantity,
-                existingConfirmedQuantity: toNumber(item.confirmedQuantity),
-                existingBalanceQuantity: toNumber(item.balanceQuantity),
-            });
+            if (isDvhExcel || quantity !== 0) {
+                const key = `${report.recipientUnitId}:${item.materialId}`;
+                changesByKey.set(key, {
+                    unitId: report.recipientUnitId,
+                    materialId: item.materialId,
+                    quantity,
+                    existingConfirmedQuantity: toNumber(item.confirmedQuantity),
+                    existingBalanceQuantity: toNumber(item.balanceQuantity),
+                });
+            }
         }
     }
 
@@ -138,17 +144,19 @@ export const buildDownloadAllocationChanges = ({
     isMatkal,
     outgoingAllocationReports,
     requisitionReports,
+    isDvhExcel
 }: {
     isMatkal: boolean;
     outgoingAllocationReports: Report[];
     requisitionReports: Report[];
+    isDvhExcel: boolean;
 }): AllocationChange[] => {
     if (!isMatkal) {
-        return buildAllocationChangesFromReports(outgoingAllocationReports);
+        return buildAllocationChangesFromReports(outgoingAllocationReports, isDvhExcel);
     }
 
     if (outgoingAllocationReports.length > 0) {
-        return buildAllocationChangesFromReports(outgoingAllocationReports);
+        return buildAllocationChangesFromReports(outgoingAllocationReports, isDvhExcel);
     }
 
     return buildAllocationChangesFromRequisitionReports(requisitionReports);

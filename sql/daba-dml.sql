@@ -1221,6 +1221,10 @@ INSERT INTO shoval.units_ids (id) VALUES
     (999),
     (1000);
 
+INSERT INTO shoval.tsav_irgun_codes (id, description, record_status_id)
+SELECT id::character varying(10), CONCAT('סימול ', id), 'ACTIVE'
+FROM shoval.units_ids;
+
 INSERT INTO shoval.units (unit_id, object_type, description, level_id, unit_type_id, start_date, end_date) VALUES
     (1, 'O', 'יחידה 1', 0, 1, '2020-01-01', '2099-12-31'),
     (2, 'O', 'יחידה 2', 1, 2, '2020-01-01', '2099-12-31'),
@@ -2222,6 +2226,9 @@ INSERT INTO shoval.units (unit_id, object_type, description, level_id, unit_type
     (998, 'O', 'יחידה 998', 4, 5, '2020-01-01', '2099-12-31'),
     (999, 'O', 'יחידה 999', 4, 5, '2020-01-01', '2099-12-31'),
     (1000, 'O', 'יחידה 1000', 4, 5, '2020-01-01', '2099-12-31');
+
+UPDATE shoval.units
+SET tsav_irgun_code = unit_id::character varying(10);
 
 INSERT INTO shoval.units_relations (unit_id, unit_object_type, related_unit_id, related_unit_object_type, unit_relation_id, start_date, end_date) VALUES
     (1, 'O', 2, 'O', '1', '2020-01-01', '2099-12-31'),

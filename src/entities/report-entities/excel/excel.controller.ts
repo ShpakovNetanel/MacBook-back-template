@@ -1,6 +1,7 @@
 import { Body, Controller, Post, Req } from "@nestjs/common";
 import { ExcelService } from "./excel.service";
 import type { ExcelImportBody } from "./excel.types";
+import type { DownloadAllocationsDTO } from "../report/report.types";
 
 @Controller("/excel")
 export class ExcelController {
@@ -15,6 +16,18 @@ export class ExcelController {
             request["date"],
             Number(request.headers["unit"]),
             excelImportBody,
+        );
+    }
+
+    @Post("allocationDuh")
+    exportAllocationDuh(
+        @Body() downloadAllocationsDTO: DownloadAllocationsDTO,
+        @Req() request: Request,
+    ) {
+        return this.service.exportAllocationDuh(
+            request["date"],
+            Number(request.headers["unit"]),
+            downloadAllocationsDTO?.materialId,
         );
     }
 }

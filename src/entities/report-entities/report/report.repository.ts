@@ -9,6 +9,7 @@ import { MaterialCategory } from "../../material-entities/material-category/mate
 import { MaterialNickname } from "../../material-entities/material-nickname/material-nickname.model";
 import { Material } from "../../material-entities/material/material.model";
 import { UnitFavoriteMaterial } from "../../material-entities/unit-favorite-material/unit-favorite-material.model";
+import { MaterialStandardGroup } from "../../standard-entities/material-standard-group/material-standard-group.model";
 import { StandardGroup } from "../../standard-entities/standard-group/standard-group.model";
 import { UnitId } from "../../unit-entities/unit-id/unit-id.model";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
@@ -17,6 +18,14 @@ import { formatDate } from "../../../utils/date";
 import { IReportItem, ReportItem } from "../report-item/report-item.model";
 import { IReport, Report } from "./report.model";
 import { MaterialDto, ReportChanges, ReportItemConflictField } from "./report.types";
+
+export type StandardGroupMaterialRow = {
+    groupId: string;
+    groupDescription: string;
+    materialId: string;
+    materialDescription: string;
+    unitOfMeasurement: string;
+};
 
 @Injectable()
 export class ReportRepository {
@@ -27,6 +36,7 @@ export class ReportRepository {
         @InjectModel(UnitFavoriteMaterial) private readonly unitFavoriteMaterialModel: typeof UnitFavoriteMaterial,
         @InjectModel(UnitRelation) private readonly unitRelationModel: typeof UnitRelation,
         @InjectModel(Material) private readonly materialModel: typeof Material,
+        @InjectModel(MaterialStandardGroup) private readonly materialStandardGroupModel: typeof MaterialStandardGroup,
         @InjectModel(StandardGroup) private readonly standardGroupModel: typeof StandardGroup) { }
 
     async saveReports<Key extends ReportItemConflictField>({
@@ -354,6 +364,34 @@ export class ReportRepository {
             itemStatuses: [RECORD_STATUS.ACTIVE],
             materialIds,
         });
+    }
+
+    async fetchStandardGroupMaterials(groupIds: string[]): Promise<StandardGroupMaterialRow[]> {
+        if (groupIds.length === 0) return [];
+
+        const mappings = await this.materialStandardGroupModel.findAll({
+            where: {
+                groupId: { [Op.in]: groupIds },
+            },
+            include: [{
+                model: Material,
+                required: true,
+                attributes: ["id", "description", "unitOfMeasurement"],
+            }, {
+                model: StandardGroup,
+                required: true,
+                attributes: ["id", "name"],
+            }],
+            order: [["groupId", "ASC"], ["materialId", "ASC"]],
+        });
+
+        return mappings.map((mapping) => ({
+            groupId: mapping.groupId,
+            groupDescription: mapping.standardGroup?.name ?? "",
+            materialId: mapping.materialId,
+            materialDescription: mapping.material?.description ?? "",
+            unitOfMeasurement: mapping.material?.unitOfMeasurement ?? "",
+        }));
     }
 
     async fetchFavoriteReportsData(

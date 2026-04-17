@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
+import Decimal from "decimal.js";
 import { MATERIAL_TYPES, MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS, UNIT_STATUSES } from "../../../constants";
 import { MaterialRepository } from "../../material-entities/material/material.repository";
-import { UnitLookupRow, UnitHierarchyRepository } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.repository";
+import { UnitHierarchyRepository, UnitLookupRow } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.repository";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
 import { ReportRepository } from "../report/report.repository";
+import { ReportService } from "../report/report.service";
 import type { MaterialDto, ReportDto, ReportItemDto, ReportItemTypeDto, UnitDto } from "../report/report.types";
 import {
     ExcelImportBody,
@@ -13,8 +15,6 @@ import {
     NormalizedScreenRow,
     ValidExcelRow,
 } from "./excel.types";
-import Decimal from "decimal.js";
-import { isDefined } from "class-validator";
 
 type MaterialImportRow = {
     id: string;
@@ -69,7 +69,6 @@ const UNIT_OUTSIDE_OPEN_BRANCHES_MESSAGE = "היחידה אינה תחת היל�
 const UNIT_STATUS_INVALID_MESSAGE = "היחידה חייבת להיות בסטטוס ממתין להקצאה";
 const INVENTORY_USAGE_LEVEL_MESSAGE = "עבור מלאי ושימוש ניתן לייבא רק יחידות ברמת גדוד";
 const REQUEST_LEVEL_MESSAGE = "עבור דרישה היחידה חייבת להיות נמוכה מיחידת המסך";
-const MATERIAL_MULTIPLY_MESSAGE = "הכמות חייבת להיות בכפולות של מכפל המק\"ט";
 
 @Injectable()
 export class ExcelService {
@@ -77,7 +76,26 @@ export class ExcelService {
         private readonly materialRepository: MaterialRepository,
         private readonly reportRepository: ReportRepository,
         private readonly unitHierarchyRepository: UnitHierarchyRepository,
+        private readonly reportService: ReportService,
     ) { }
+
+    async exportAllocationDuh(date: string, screenUnitId: number, materialId?: string) {
+        const data = await this.reportService.fetchAllocationDuhExport(date, screenUnitId, materialId);
+
+        if (!data) {
+            return {
+                data: null,
+                message: "אין הקצאות לייצוא",
+                type: MESSAGE_TYPES.WARNING,
+            };
+        }
+
+        return {
+            data,
+            message: "אקסל הקצאה דו״ה הופק בהצלחה",
+            type: MESSAGE_TYPES.SUCCESS,
+        };
+    }
 
     async importExcelRows(
         date: string,

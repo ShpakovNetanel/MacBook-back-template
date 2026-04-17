@@ -5,6 +5,7 @@ import { MaterialCategory } from "../../material-entities/material-category/mate
 import { MaterialNickname } from "../../material-entities/material-nickname/material-nickname.model";
 import { Material } from "../../material-entities/material/material.model";
 import { UnitFavoriteMaterial } from "../../material-entities/unit-favorite-material/unit-favorite-material.model";
+import { MaterialStandardGroup } from "../../standard-entities/material-standard-group/material-standard-group.model";
 import { StandardGroup } from "../../standard-entities/standard-group/standard-group.model";
 import { UnitHierarchyModule } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.module";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
@@ -32,6 +33,7 @@ import { ReportService } from "./report.service";
         MaterialNickname,
         MaterialCategory,
         MainCategory,
+        MaterialStandardGroup,
         StandardGroup,
         UnitFavoriteMaterial,
         Comment,
