@@ -1,16 +1,16 @@
 import { Module } from "@nestjs/common";
 import { SequelizeModule } from "@nestjs/sequelize";
 import { UnitStatus } from "./units-statuses.model";
-import { UnitStatusTypesController } from "./units-statuses.controller";
-import { UnitStatusTypesService } from "./units-statuses.service";
-import { UnitStatusTypesRepository } from "./units-statuses.repository";
+import { UnitStatusController } from "./units-statuses.controller";
+import { UnitStatusService } from "./units-statuses.service";
+import { UnitStatusRepository } from "./units-statuses.repository";
 import { UnitRelation } from "../unit-relations/unit-relation.model";
 
 @Module({
     imports: [SequelizeModule.forFeature([UnitStatus, UnitRelation])],
-    controllers: [UnitStatusTypesController],
-    providers: [UnitStatusTypesService, UnitStatusTypesRepository],
-    exports: [UnitStatusTypesService]
+    controllers: [UnitStatusController],
+    providers: [UnitStatusService, UnitStatusRepository],
+    exports: [UnitStatusService, UnitStatusRepository]
 })
 
-export class UnitStatusTypesModule { }
+export class UnitStatusModule { }

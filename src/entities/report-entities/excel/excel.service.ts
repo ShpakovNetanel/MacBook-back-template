@@ -627,6 +627,7 @@ export class ExcelService {
         return {
             id: change.reportType,
             quantity: change.quantity,
+            availableQuantityToEat: 0,
             yesterdayInventoryQuantity: change.reportType === REPORT_TYPES.INVENTORY ? 0 : null,
             comment: "",
             status: RECORD_STATUS.ACTIVE,

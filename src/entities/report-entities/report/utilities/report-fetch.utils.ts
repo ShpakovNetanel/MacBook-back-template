@@ -231,6 +231,9 @@ export const buildReportsResponse = ({
                         quantity: isAllocationReport
                             ? toNumber(item.reportedQuantity)
                             : fetchQuantity ? toNumber(item.confirmedQuantity) : 0,
+                        availableQuantityToEat: isAllocationReport
+                            ? toNumber(item.balanceQuantity)
+                            : 0,
                         yesterdayInventoryQuantity: report.reportTypeId === REPORT_TYPES.INVENTORY
                             ? (yesterdayInventoryQuantityByUnitMaterial.get(`${report.unitId}:${item.materialId}`) ?? 0)
                             : null,
@@ -282,6 +285,7 @@ export const buildReportsResponse = ({
                 type: {
                     id: REPORT_TYPES.INVENTORY,
                     quantity: 0,
+                    availableQuantityToEat: 0,
                     yesterdayInventoryQuantity: toNumber(item.confirmedQuantity ?? item.reportedQuantity),
                     comment: "",
                     status: item.status ?? null,
@@ -356,6 +360,7 @@ const buildFavoriteItemTypes = (
     reportTypeIds.map((reportTypeId) => ({
         id: reportTypeId,
         quantity: 0,
+        availableQuantityToEat: 0,
         yesterdayInventoryQuantity: reportTypeId === REPORT_TYPES.INVENTORY
             ? (yesterdayInventoryQuantityByUnitMaterial.get(`${unitId}:${materialId}`) ?? 0)
             : null,

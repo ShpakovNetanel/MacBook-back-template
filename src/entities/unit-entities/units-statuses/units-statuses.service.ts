@@ -1,17 +1,22 @@
 import { Injectable } from "@nestjs/common";
-import { Transaction } from "sequelize";
-import { UnitStatusTypesRepository } from "./units-statuses.repository";
+import { InjectConnection } from "@nestjs/sequelize";
+import { Sequelize } from "sequelize-typescript";
+import { UnitStatusRepository } from "./units-statuses.repository";
 import { UpdateUnitStatus } from "./DTO/updateUnitStatus";
 
 @Injectable()
-export class UnitStatusTypesService {
-    constructor(private readonly repository: UnitStatusTypesRepository) { }
+export class UnitStatusService {
+    constructor(private readonly repository: UnitStatusRepository,
+        @InjectConnection()
+        private readonly sequelize: Sequelize
+    ) { }
 
     async updateHierarchyStatuses(
         unitsStatuses: UpdateUnitStatus,
         date: string,
-        transaction?: Transaction
     ) {
+        const transaction = await this.sequelize.transaction();
+
         try {
             const hierarchyUnitIds = await this.repository.fetchHierarchyUnitIds(date, unitsStatuses.unitsIds);
             const targetUnitIds = unitsStatuses.updateHierarchy
@@ -28,13 +33,9 @@ export class UnitStatusTypesService {
                     date: new Date(date)
                 }));
 
-            return this.repository.updateStatuses(statusesToSave);
+            return this.repository.updateStatuses(statusesToSave, transaction);
         } catch (error) {
             console.log(error);
         }
-    }
-
-    clearStatusForUnitDate(unitId: number, date: string, transaction?: Transaction) {
-        return this.repository.clearStatusForUnitDate(unitId, date, transaction);
     }
 }

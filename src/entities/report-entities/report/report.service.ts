@@ -1,19 +1,21 @@
 import { BadGatewayException, BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { isEmptyish } from "remeda";
+import { Error } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
 import { MESSAGE_TYPES, REPORT_TYPES, UNIT_LEVELS } from "../../../constants";
+import { formatDate, getPreviousCalendarDate } from "../../../utils/date";
 import { UnitHierarchyService } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.service";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
 import { UnitRepository } from "../../unit-entities/unit/unit.repository";
-import { formatDate, getPreviousCalendarDate } from "../../../utils/date";
 import { ReportRepository } from "./report.repository";
 import {
     AggregateReportsDTO,
     FavoriteReportDto,
     InventoryCalculationResultDto,
+    IReportsChanges,
     ReportDto,
-    SaveCommitteesBody,
     SaveAllocationsDTO,
-    IReportsChanges
+    SaveCommitteesBody
 } from "./report.types";
 import {
     assertLowerHierarchyStable,
@@ -26,20 +28,18 @@ import {
     sortNumeric,
 } from "./utilities/report-aggregate-hierarchy.utils";
 import {
+    buildAllocationBalanceUpdates,
+    buildAllocationsChanges,
+    buildConfirmedAllocationChanges,
+    buildDownloadAllocationChanges,
+    buildNextLevelAllocationDraftChanges
+} from "./utilities/report-allocation-save.utils";
+import {
     buildFavoriteReportsResponse,
     buildReportsMaterialsResponse,
     buildReportsResponse
 } from "./utilities/report-fetch.utils";
 import { buildReportsToSave } from "./utilities/report-save.utils";
-import { isEmptyish } from "remeda";
-import {
-    buildAllocationBalanceUpdates,
-    buildDownloadAllocationChanges,
-    buildAllocationChangesFromReports,
-    buildAllocationsChanges,
-    buildConfirmedAllocationChanges,
-    buildNextLevelAllocationDraftChanges,
-} from "./utilities/report-allocation-save.utils";
 import {
     aggregateGdudQuantitiesToAncestors,
     buildChildIdsByParent,
@@ -50,7 +50,6 @@ import {
     collectMaterialIdsFromReports,
     collectUnitsForLockedDirectChildBranches,
 } from "./utilities/report-service.utils";
-import { Error } from "sequelize";
 
 @Injectable()
 export class ReportService {

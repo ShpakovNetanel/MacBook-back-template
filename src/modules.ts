@@ -9,7 +9,7 @@ import { StandardValuesModule } from "./entities/standard-entities/standard-valu
 import { TagGroupModule } from "./entities/standard-entities/tag-group/tag-group.module";
 import { UnitStandardTagModule } from "./entities/standard-entities/unit-standard-tag/unit-standard-tag.module";
 import { UnitHierarchyModule } from "./entities/unit-entities/features/unit-hierarchy/unit-hierarchy.module";
-import { UnitStatusTypesModule } from "./entities/unit-entities/units-statuses/units-statuses.module";
+import { UnitStatusModule } from "./entities/unit-entities/units-statuses/units-statuses.module";
 import { UnitUserModule } from "./entities/unit-entities/users/user.module";
 
 export default [
@@ -18,7 +18,7 @@ export default [
     UnitHierarchyModule,
     ReportModule,
     ExcelModule,
-    UnitStatusTypesModule,
+    UnitStatusModule,
     CommentModule,
     ReportItemModule,
     TagGroupModule,

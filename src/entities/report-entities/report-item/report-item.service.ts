@@ -1,42 +1,85 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { ReportItemRepository } from "./report-item.repository";
-import { MESSAGE_TYPES, RECORD_STATUS } from "../../../constants";
+import { MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS, UNIT_STATUSES } from "../../../constants";
 import { IReportItem } from "./report-item.model";
 import { Sequelize } from "sequelize-typescript";
-import { DeleteItemsDTO } from "./report.types";
+import { DeleteItemsDTO, EatAllocationDTO } from "./report.types";
+import { isNullish } from "remeda";
+import { UnitRepository } from "src/entities/unit-entities/unit/unit.repository";
+import { UnitStatusRepository } from "src/entities/unit-entities/units-statuses/units-statuses.repository";
 
 @Injectable()
 export class ReportItemService {
     constructor(private readonly repository: ReportItemRepository,
+        private readonly unitRepository: UnitRepository,
+        private readonly unitStatusRepository: UnitStatusRepository,
         private readonly sequelize: Sequelize
     ) { }
 
-    async deleteReportItems(recipientUnitId: number, deleteItemsDTO: DeleteItemsDTO, date: string) {
+    async eatAllocation(eatAllocation: EatAllocationDTO) {
+        const itemsToUpdate: IReportItem[] = [];
         const transaction = await this.sequelize.transaction();
 
         try {
-            const reportsToDelete = await this.repository.getReports(recipientUnitId,
-                deleteItemsDTO, new Date(date));
+            const unitDetails = await this.unitRepository.fetchActiveUnitDetails(eatAllocation.date, eatAllocation.screenUnitId);
 
-            const itemsToDelete: IReportItem[] = reportsToDelete.flatMap(report =>
-                (report.items ?? []).map(item => ({
-                    ...item.dataValues,
-                    status: RECORD_STATUS.INACTIVE,
-                    confirmedQuantity: null,
-                    reportedQuantity: null
-                }))
-            );
+            const recipientUnitAllocation = await this.repository.fetchReports({
+                date: eatAllocation.date,
+                materialId: eatAllocation.materialId,
+                reportsTypesIds: [REPORT_TYPES.ALLOCATION],
+                recipientUnitId: eatAllocation.unitId
+            });
 
-            await this.repository.updateReportsItems(itemsToDelete);
+            const recipientUnitItem = recipientUnitAllocation?.[0]?.items?.[0]?.dataValues;
+            let screenUnitItem: IReportItem | undefined;
+
+            if (unitDetails?.unitLevelId !== UNIT_LEVELS.MATKAL) {
+                const screenUnitAllocation = await this.repository.fetchReports({
+                    date: eatAllocation.date,
+                    materialId: eatAllocation.materialId,
+                    reportsTypesIds: [REPORT_TYPES.ALLOCATION],
+                    recipientUnitId: eatAllocation.screenUnitId
+                });
+
+                screenUnitItem = screenUnitAllocation?.[0]?.items?.[0]?.dataValues;
+
+                if (!isNullish(screenUnitItem)) {
+                    screenUnitItem.balanceQuantity! += eatAllocation.quantity;
+
+                    itemsToUpdate.push(screenUnitItem);
+                }
+            }
+
+            if (!isNullish(recipientUnitItem)) {
+                recipientUnitItem.balanceQuantity! -= eatAllocation.quantity;
+                recipientUnitItem.confirmedQuantity! -= eatAllocation.quantity;
+
+                if (recipientUnitItem.confirmedQuantity === 0) {
+                    await this.unitStatusRepository.updateStatuses([{
+                        date: new Date(eatAllocation.date),
+                        unitId: eatAllocation.unitId,
+                        unitStatusId: UNIT_STATUSES.WAITING_FOR_ALLOCATION
+                    }], transaction);
+                }
+
+                itemsToUpdate.push(recipientUnitItem);
+            }
+
+            await this.repository.updateReportsItems(itemsToUpdate, transaction);
+
             await transaction.commit();
+            return {
+                message: 'ההקצאה נאכלה בהצלחה',
+                type: MESSAGE_TYPES.SUCCESS
+            };
         } catch (error) {
             console.log(error);
+            
             await transaction.rollback();
-
             throw new BadRequestException({
-                message: 'נכשלה מחיקת הדיווחים, יש לנסות שנית',
+                message: 'נכשלה אכילת ההקצאה, יש לנסות שוב',
                 type: MESSAGE_TYPES.FAILURE
-            })
+            });
         }
     }
 }

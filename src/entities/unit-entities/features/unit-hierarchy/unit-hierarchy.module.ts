@@ -7,7 +7,7 @@ import { UnitRelation } from "../../unit-relations/unit-relation.model";
 import { UnitStatusType } from "../../unit-status-type/unit-status-type.model";
 import { Unit } from "../../unit/unit.model";
 import { UnitStatus } from "../../units-statuses/units-statuses.model";
-import { UnitStatusTypesRepository } from "../../units-statuses/units-statuses.repository";
+import { UnitStatusRepository } from "../../units-statuses/units-statuses.repository";
 import { UnitHierarchyController } from "./unit-hierarchy.controller";
 import { UnitHierarchyRepository } from "./unit-hierarchy.repository";
 import { UnitHierarchyService } from "./unit-hierarchy.service";
@@ -29,7 +29,7 @@ import { UnitUserModule } from "../../users/user.module";
   providers: [
     UnitHierarchyService,
     UnitHierarchyRepository,
-    UnitStatusTypesRepository,
+    UnitStatusRepository,
     ReportRoutingRepository
   ],
   exports: [UnitHierarchyService, UnitHierarchyRepository]

@@ -1,10 +1,10 @@
 import { Body, Controller, Post, Req } from "@nestjs/common";
-import { UnitStatusTypesService } from "./units-statuses.service";
+import { UnitStatusService } from "./units-statuses.service";
 import { UpdateUnitStatus } from "./DTO/updateUnitStatus";
 
 @Controller('statuses')
-export class UnitStatusTypesController {
-    constructor(private readonly service: UnitStatusTypesService) { }
+export class UnitStatusController {
+    constructor(private readonly service: UnitStatusService) { }
 
     @Post('')
     updateHierarchyStatuses(@Body() unitsStatuses: UpdateUnitStatus,

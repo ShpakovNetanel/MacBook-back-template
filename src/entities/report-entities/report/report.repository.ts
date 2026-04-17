@@ -502,7 +502,7 @@ export class ReportRepository {
         };
     }
 
-    private fetchReportsByScope({
+    fetchReportsByScope({
         date,
         reportingUnitIds = [],
         recipientUnitIds,

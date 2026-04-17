@@ -1,14 +1,21 @@
-import { Body, Controller, Delete, Req } from "@nestjs/common";
+import { Body, Controller, Delete, Post, Req } from "@nestjs/common";
 import { ReportItemService } from "./report-item.service";
-import { DeleteItemsDTO } from "./report.types";
+import type { DeleteItemsDTO, EatAllocationDTO } from "./report.types";
 
-@Controller('reportsItems')
+@Controller('items')
 export class ReportItemController {
     constructor(private readonly service: ReportItemService) { }
 
-    @Delete('')
-    deleteItems(@Req() request: Request, @Body() deleteItemsDTO: DeleteItemsDTO) {
-        return this.service.deleteReportItems(Number(request?.['unit']), deleteItemsDTO, request?.['date']
-        )
+    @Post('allocation/eat')
+    eatAllocation(@Body() eatAllocation: EatAllocationDTO,
+        @Req() request: Request) {
+        return this.service.eatAllocation({
+            date: request?.['date'],
+            materialId: eatAllocation.materialId,
+            quantity: eatAllocation.quantity,
+            unitId: eatAllocation.unitId,
+            screenUnitId: Number(request.headers?.['unit'])
+        });
     }
+
 }

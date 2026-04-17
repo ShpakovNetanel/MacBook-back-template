@@ -7,9 +7,9 @@ import { UnitRelation } from "../unit-relations/unit-relation.model";
 import { IUnitStatus, UnitStatus } from "./units-statuses.model";
 
 @Injectable()
-export class UnitStatusTypesRepository {
+export class UnitStatusRepository {
     constructor(
-        @InjectModel(UnitStatus) private readonly unitStatusHistoryModel: typeof UnitStatus,
+        @InjectModel(UnitStatus) private readonly unitStatusModel: typeof UnitStatus,
         @InjectModel(UnitRelation) private readonly unitRelationModel: typeof UnitRelation,
     ) { }
 
@@ -50,16 +50,17 @@ export class UnitStatusTypesRepository {
         return hierarchyUnitIds;
     }
 
-    updateStatuses(unitsStatuses: IUnitStatus[]) {
-        return this.unitStatusHistoryModel.bulkCreate(unitsStatuses, {
+    updateStatuses(unitsStatuses: IUnitStatus[], transaction?: Transaction) {
+        return this.unitStatusModel.bulkCreate(unitsStatuses, {
             updateOnDuplicate: ['unitStatusId'],
+            transaction
         })
     }
 
-    clearStatusesForUnitsDate(unitIds: number[], date: string, transaction?: Transaction) {
+    clearStatusesForUnitsDate(unitIds: number[], date: string, transaction: Transaction) {
         if (unitIds.length === 0) return Promise.resolve(0);
 
-        return this.unitStatusHistoryModel.destroy({
+        return this.unitStatusModel.destroy({
             where: {
                 unitId: { [Op.in]: unitIds },
                 date,
@@ -69,7 +70,7 @@ export class UnitStatusTypesRepository {
     }
 
     clearStatusForUnitDate(unitId: number, date: string, transaction?: Transaction) {
-        return this.unitStatusHistoryModel.destroy({
+        return this.unitStatusModel.destroy({
             where: {
                 unitId,
                 date,

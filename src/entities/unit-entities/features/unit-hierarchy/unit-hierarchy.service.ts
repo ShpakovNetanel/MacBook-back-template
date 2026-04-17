@@ -10,7 +10,7 @@ import { TransferUnitRelationDto } from "./DTO/update-unit-relation.dto";
 import { MESSAGE_TYPES, UNIT_STATUSES } from "../../../../constants";
 import { Unit } from "../../unit/unit.model";
 import { UnitStatus } from "../../units-statuses/units-statuses.model";
-import { UnitStatusTypesRepository } from "../../units-statuses/units-statuses.repository";
+import { UnitStatusRepository } from "../../units-statuses/units-statuses.repository";
 import { ReportRoutingRepository } from "../../../report-entities/report/report-routing.repository";
 import { formatDate } from "../../../../utils/date";
 import { isDefined, isEmptyish } from "remeda";
@@ -36,7 +36,7 @@ export class UnitHierarchyService {
   constructor(
     private readonly repository: UnitHierarchyRepository,
     private readonly sequelize: Sequelize,
-    private readonly unitStatusTypesRepository: UnitStatusTypesRepository,
+    private readonly unitStatusTypesRepository: UnitStatusRepository,
     private readonly reportRoutingRepository: ReportRoutingRepository,
     private readonly unitUserRepository: UserRepository
   ) { }
