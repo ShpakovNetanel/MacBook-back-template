@@ -59,7 +59,7 @@ describe("buildReportsResponse", () => {
                 multiply: 0,
                 nickname: "",
                 category: "",
-                unitOfMeasure: "",
+                unitOfMeasure: "יח",
                 type: "ITEM",
             },
             comments: [{
@@ -191,7 +191,7 @@ describe("buildReportsResponse", () => {
                 multiply: 0,
                 nickname: "",
                 category: "",
-                unitOfMeasure: "",
+                unitOfMeasure: "יח",
                 type: "ITEM",
             },
             comments: [],
@@ -217,6 +217,10 @@ describe("buildReportsResponse", () => {
                     standardGroup: {
                         id: "GRP000001",
                         name: "Tool Group",
+                        groupType: "קבוצה",
+                        nickname: {
+                            nickname: "Group Nickname",
+                        },
                     },
                 }],
             }] as any,
@@ -227,9 +231,9 @@ describe("buildReportsResponse", () => {
             id: "GRP000001",
             description: "Tool Group",
             multiply: 0,
-            nickname: "",
+            nickname: "Group Nickname",
             category: "קבוצה",
-            unitOfMeasure: "",
+            unitOfMeasure: "יח",
             type: "TOOL",
         });
     });

@@ -44,15 +44,15 @@ export class ReportItemService {
                 screenUnitItem = screenUnitAllocation?.[0]?.items?.[0]?.dataValues;
 
                 if (!isNullish(screenUnitItem)) {
-                    screenUnitItem.balanceQuantity! += eatAllocation.quantity;
+                    screenUnitItem.balanceQuantity! = Number(screenUnitItem.balanceQuantity) + Number(eatAllocation.quantity);
 
                     itemsToUpdate.push(screenUnitItem);
                 }
             }
 
             if (!isNullish(recipientUnitItem)) {
-                recipientUnitItem.balanceQuantity! -= eatAllocation.quantity;
-                recipientUnitItem.confirmedQuantity! -= eatAllocation.quantity;
+                recipientUnitItem.balanceQuantity = Number(recipientUnitItem.balanceQuantity) - Number(eatAllocation.quantity);
+                recipientUnitItem.confirmedQuantity! = Number(recipientUnitItem.confirmedQuantity) - Number(eatAllocation.quantity);
 
                 if (recipientUnitItem.confirmedQuantity === 0) {
                     await this.unitStatusRepository.updateStatuses([{

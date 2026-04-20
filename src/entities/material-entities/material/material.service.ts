@@ -49,13 +49,13 @@ export class MaterialService {
             id: group.id,
             description: group.name,
             favorite: favoriteIds.has(group.id),
-            type: MATERIAL_TYPES.TOOL,
+            type: group.groupType,
             category: group.groupType === MATERIAL_TYPES.ITEM
                 ? 'קבוצת מק״טים'
                 : group.groupType === MATERIAL_TYPES.TOOL
                     ? 'קבוצת כלים' : '',
-            nickname: "",
-            unitOfMeasure: null,
+            nickname: group.nickname?.nickname ?? "",
+            unitOfMeasure: 'יח',
             multiply: 0,
             comment: null
         }));
@@ -92,7 +92,7 @@ export class MaterialService {
             favorite: favoriteIds.has(group.id),
             type: MATERIAL_TYPES.TOOL,
             category: 'קבוצה',
-            nickname: "",
+            nickname: group.nickname?.nickname ?? "",
             unitOfMeasure: null,
             multiply: 0,
         }));

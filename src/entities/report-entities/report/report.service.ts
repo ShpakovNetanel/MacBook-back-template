@@ -223,6 +223,14 @@ export class ReportService {
     async fetchMostRecentMaterials(date: string, recipientUnitId: number) {
         try {
             const reports = await this.repository.fetchMostRecentReportsData(date, recipientUnitId);
+            
+            if(isEmptyish(reports)) {
+                throw new BadGatewayException({
+                    message: 'לא נמצאה ועדה אחרונה',
+                    type: MESSAGE_TYPES.WARNING
+                })
+            }
+
             const materialIds = collectMaterialIdsFromReports(reports);
             const yesterdayInventoryReports = materialIds.length === 0
                 ? []
@@ -243,12 +251,12 @@ export class ReportService {
                 message: 'ייבוא המק״טים צלח',
                 type: MESSAGE_TYPES.SUCCESS
             };
-        } catch (error) {
+        } catch (error: any) {
             console.log(error);
 
             throw new BadGatewayException({
-                message: 'נכשלה הבאת המק״טים מועדה אחרונה',
-                type: MESSAGE_TYPES.FAILURE
+                message: error?.response?.message ?? 'נכשלה הבאת המק״טים מועדה אחרונה',
+                type: error?.response?.type ?? MESSAGE_TYPES.FAILURE
             });
         }
     }
@@ -300,7 +308,8 @@ export class ReportService {
                 unitsMap,
                 childrenByParentMap,
                 dbReports,
-                username: user
+                username: user,
+                isLaunching: aggregatedReportsDTO.isLaunching,
             });
 
             await this.repository.saveReports({

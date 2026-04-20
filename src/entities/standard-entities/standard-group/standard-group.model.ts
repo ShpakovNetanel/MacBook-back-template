@@ -1,6 +1,6 @@
 import { DataTypes } from "sequelize";
-import { Column, Model, PrimaryKey, Table } from "sequelize-typescript";
-import { fileURLToPath } from "url";
+import { Column, HasOne, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { MaterialNickname } from "../../material-entities/material-nickname/material-nickname.model";
 
 type IStandardGroup = {
     id: string;
@@ -19,4 +19,7 @@ export class StandardGroup extends Model<IStandardGroup> {
 
     @Column({ field: "group_type", type: DataTypes.STRING })
     declare groupType: string;
+
+    @HasOne(() => MaterialNickname, { foreignKey: "materialId", sourceKey: "id", constraints: false, as: "nickname" })
+    declare nickname?: MaterialNickname;
 }

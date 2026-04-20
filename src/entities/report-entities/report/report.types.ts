@@ -52,6 +52,7 @@ export type AllocationDuhExportDto = {
 export type AggregateReportsDTO = {
     unitsIds: number[];
     lowerUnitsIds: number[];
+    isLaunching: boolean;
 }
 
 export type AggregateUnitDto = UnitDto & {

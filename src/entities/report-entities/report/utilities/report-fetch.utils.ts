@@ -74,9 +74,9 @@ const buildMaterialDto = (
     id: materialId,
     description: material?.description ?? standardGroup?.name ?? "",
     multiply: toNumber(material?.multiply),
-    nickname: material?.nickname?.nickname ?? "",
-    category: material?.materialCategory?.mainCategory?.description ?? (isDefined(standardGroup) ? "קבוצה" : ""),
-    unitOfMeasure: material?.unitOfMeasurement ?? "",
+    nickname: material?.nickname?.nickname ?? standardGroup?.nickname?.nickname ?? "",
+    category: material?.materialCategory?.mainCategory?.description ?? (isDefined(standardGroup) ? standardGroup.groupType : ""),
+    unitOfMeasure: material?.unitOfMeasurement ?? "יח",
     type: isDefined(material) ? MATERIAL_TYPES.ITEM : isDefined(standardGroup) ? MATERIAL_TYPES.TOOL : MATERIAL_TYPES.ITEM,
 });
 

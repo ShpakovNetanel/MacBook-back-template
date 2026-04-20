@@ -1,6 +1,6 @@
 import { BadGatewayException, Injectable, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
-import { isEmpty } from "remeda";
+import { isEmpty, isNullish } from "remeda";
 import { col, Op, where } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
 import { MATERIAL_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_RELATION_TYPES, UNIT_STATUSES } from "../../../constants";
@@ -442,6 +442,10 @@ export class ReportRepository {
                 }],
             }),
             this.standardGroupModel.findAll({
+                include: [{
+                    association: "nickname",
+                    required: false,
+                }],
                 where: {
                     id: { [Op.in]: favoriteIds }
                 }
@@ -462,7 +466,7 @@ export class ReportRepository {
                 id: standardGroup.id,
                 description: standardGroup.name ?? "",
                 multiply: 0,
-                nickname: "",
+                nickname: standardGroup.nickname?.nickname ?? "",
                 category: "קבוצה",
                 unitOfMeasure: "",
                 type: MATERIAL_TYPES.TOOL,
@@ -486,8 +490,9 @@ export class ReportRepository {
             }
         });
 
+        if (isNullish(latestCreatedOn)) return [];
+
         const { formattedDate: latestDate } = formatDate(latestCreatedOn);
-        if (!latestDate) return [];
 
         return this.fetchReportsByScope({
             date: latestDate,
@@ -686,6 +691,10 @@ export class ReportRepository {
                 model: StandardGroup,
                 as: "standardGroup",
                 required: false,
+                include: [{
+                    association: "nickname",
+                    required: false,
+                }]
             }],
             where: {
                 materialId: materialFilter,
@@ -693,10 +702,12 @@ export class ReportRepository {
                     [Op.eq]: Sequelize.literal(`(SELECT MAX(shoval.report_items."modified_at")
                                               FROM shoval.report_items
                                              WHERE shoval.report_items."report_id" = "Report"."id"
-                                               AND shoval.report_items."material_id" = "items"."material_id" )`)
+                                               AND shoval.report_items."material_id" = "items"."material_id"
+                                               AND shoval.report_items."status" IN (${itemStatuses.map((status) => `'${status}'`).join(", ")}))`)
                 },
                 status: { [Op.in]: itemStatuses }
-            }
+            },
+
         }];
     }
 }

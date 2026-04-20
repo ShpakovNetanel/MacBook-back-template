@@ -115,6 +115,10 @@ export class MaterialRepository {
                 order: [["date", "DESC"]]
             });
         const standardGroups = await this.standardGroupModel.findAll({
+            include: [{
+                association: "nickname",
+                required: false
+            }],
             where: {
                 [Op.or]: [
                     { id: { [Op.iLike]: `%${filter}%` } },
@@ -166,6 +170,10 @@ export class MaterialRepository {
             },
         });
         const standardGroups = await this.standardGroupModel.findAll({
+            include: [{
+                association: "nickname",
+                required: false
+            }],
             where: {
                 id: { [Op.in]: materialsIds },
                 groupType: {

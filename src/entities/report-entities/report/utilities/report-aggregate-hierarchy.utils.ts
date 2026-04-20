@@ -1,5 +1,5 @@
 import { BadGatewayException } from "@nestjs/common";
-import { isDefined, isEmptyish } from "remeda";
+import { isDefined, isEmptyish, isNullish } from "remeda";
 import { MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS, UNIT_STATUSES } from "../../../../constants";
 import { UnitRelation } from "../../../unit-entities/unit-relations/unit-relation.model";
 import { formatDate } from "../../../../utils/date";
@@ -383,7 +383,8 @@ const calculateReports = async (
     childrenByParentMap: Record<number, AggregateUnitDto[]>,
     reports: CalcReport,
     hierarchyReportsIndex: HierarchyReportsIndex,
-    username: string
+    username: string,
+    isLaunching: boolean
 ) => {
     let aggregatedMaterials: AggregatedMaterials[] = [];
 
@@ -424,9 +425,13 @@ const calculateReports = async (
             )
         }
 
-        if ((currentUnit.status.id === UNIT_STATUSES.WAITING_FOR_ALLOCATION ||
-            currentUnit.level === UNIT_LEVELS.GDUD) && unitReport
-        ) {
+        if (isNullish(unitReport) && isLaunching) {
+            return [];
+        }
+
+        if (((currentUnit.status.id === UNIT_STATUSES.WAITING_FOR_ALLOCATION ||
+            currentUnit.level === UNIT_LEVELS.GDUD
+            || isLaunching) && unitReport)) {
             for (const item of unitReport.items ?? []) {
                 sumMaterialQuantities(aggregatedMaterials, item.dataValues);
             }
@@ -457,7 +462,8 @@ const calculateReports = async (
                 childrenByParentMap,
                 reports,
                 hierarchyReportsIndex,
-                username
+                username,
+                isLaunching
             );
 
             if (childAggregation.length) {
@@ -518,7 +524,8 @@ export const getAggregatedReports = async ({
     unitsMap,
     childrenByParentMap,
     dbReports,
-    username
+    username,
+    isLaunching
 }: {
     date: string,
     unitsToLaunch: number[],
@@ -526,7 +533,8 @@ export const getAggregatedReports = async ({
     unitsMap: Record<number, AggregateUnitDto>,
     childrenByParentMap: Record<number, AggregateUnitDto[]>,
     dbReports: Report[],
-    username: string
+    username: string,
+    isLaunching: boolean,
 }) => {
     const reports: CalcReport = {};
     const hierarchyReportsIndex = buildHierarchyReportsIndex({
@@ -561,7 +569,8 @@ export const getAggregatedReports = async ({
                     childrenByParentMap,
                     reports,
                     hierarchyReportsIndex,
-                    username
+                    username,
+                    isLaunching
                 );
             }
         }
