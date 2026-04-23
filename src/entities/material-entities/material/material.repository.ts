@@ -100,20 +100,6 @@ export class MaterialRepository {
             },
         });
 
-
-        const materialIds = materials.map(material => material.id);
-        const comments = materialIds.length === 0
-            ? []
-            : await this.commentModel.findAll({
-                where: {
-                    materialId: { [Op.in]: materialIds },
-                    [Op.or]: [
-                        { unitId },
-                        { recipientUnitId: unitId }
-                    ]
-                },
-                order: [["date", "DESC"]]
-            });
         const standardGroups = await this.standardGroupModel.findAll({
             include: [{
                 association: "nickname",
@@ -139,6 +125,22 @@ export class MaterialRepository {
                 }
             }
         });
+
+        const materialIds = materials.map(material => material.id);
+        const groupsIds = standardGroups.map(group => group.id);
+
+        const comments = materialIds.length === 0
+            ? []
+            : await this.commentModel.findAll({
+                where: {
+                    materialId: { [Op.in]: [...materialIds, ...groupsIds] },
+                    [Op.or]: [
+                        { unitId },
+                        { recipientUnitId: unitId }
+                    ]
+                },
+                order: [["date", "DESC"]]
+            });
 
         const favoriteIds = await this.fetchFavoriteIds(unitId);
 

@@ -4,6 +4,7 @@ import { PastedMaterialsDto } from "./material.types";
 import { isEmptyish } from "remeda";
 import { MATERIAL_TYPES } from "../../../constants";
 import { StandardGroup } from "../../standard-entities/standard-group/standard-group.model";
+import { ReportCommentDto } from "src/entities/report-entities/report/report.types";
 
 const getStandardGroupCategory = (group: StandardGroup) =>
     group.categoryGroup?.categoryDesc?.description
@@ -33,14 +34,17 @@ export class MaterialService {
 
     async fetchTwenty(filter: string, unitId: number, tab: number) {
         const { materials, comments, standardGroups, favoriteIds } = await this.repository.fetchBySearch(filter, unitId, tab);
-        const commentByMaterial = new Map<string, any>();
+        const reportCommentsByMaterial = new Map<string, Map<number, string>>();
 
         for (const comment of comments) {
-            if (!commentByMaterial.has(comment.materialId)) {
-                commentByMaterial.set(comment.materialId, {
-                    type: comment.dataValues.type,
-                    comment: comment.dataValues.text
-                });
+            let commentsByType = reportCommentsByMaterial.get(comment.materialId);
+            if (!commentsByType) {
+                commentsByType = new Map<number, string>();
+                reportCommentsByMaterial.set(comment.materialId, commentsByType);
+            }
+
+            if (!commentsByType.has(comment.type)) {
+                commentsByType.set(comment.type, comment.text ?? '');
             }
         }
 
@@ -52,7 +56,9 @@ export class MaterialService {
             nickname: material.nickname?.nickname ?? "",
             type: MATERIAL_TYPES.ITEM,
             favorite: !isEmptyish(material.unitFavorites ?? []),
-            comment: commentByMaterial.get(material.id) ?? null
+            comments: Array.from(reportCommentsByMaterial.get(material.id)?.entries() ?? [])
+                .map(([type, comment]): ReportCommentDto => ({ type, comment }))
+                .sort((a, b) => a.type - b.type)
         }));
         const standardGroupResults: Array<Record<string, any>> = standardGroups.map((group) => ({
             id: group.id,
@@ -63,7 +69,9 @@ export class MaterialService {
             nickname: group.nickname?.nickname ?? "",
             unitOfMeasure: 'יח',
             multiply: 0,
-            comment: null
+            comments: Array.from(reportCommentsByMaterial.get(group.id)?.entries() ?? [])
+                .map(([type, comment]): ReportCommentDto => ({ type, comment }))
+                .sort((a, b) => a.type - b.type)
         }));
 
         return [...materialResults, ...standardGroupResults]

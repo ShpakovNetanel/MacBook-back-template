@@ -197,13 +197,7 @@ export const buildReportsResponse = ({
                 materialById.set(item.materialId, buildMaterialDto(item.materialId, item.material, item.standardGroup));
             }
 
-            const screenUnitComment = isScreenUnitReport
-                ? resolveCommentByAuthor(
-                    item.material?.comments,
-                    report.unitId,
-                    report.recipientUnitId ?? recipientUnitId
-                )
-                : "";
+            const screenUnitComment = item.material?.comments?.find(comment => comment.unitId === recipientUnitId)?.text ?? '';
 
             if (screenUnitComment) {
                 let commentsByType = reportCommentsByMaterial.get(item.materialId);
