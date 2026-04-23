@@ -11,6 +11,7 @@ import { UnitStandardTagModule } from "./entities/standard-entities/unit-standar
 import { UnitHierarchyModule } from "./entities/unit-entities/features/unit-hierarchy/unit-hierarchy.module";
 import { UnitStatusModule } from "./entities/unit-entities/units-statuses/units-statuses.module";
 import { UnitUserModule } from "./entities/unit-entities/users/user.module";
+import { ServerTimeModule } from "./server-time/server-time.module";
 
 export default [
     MaterialModule,
@@ -25,5 +26,6 @@ export default [
     StandardTagModule,
     UnitStandardTagModule,
     UnitUserModule,
-    StandardValuesModule
+    StandardValuesModule,
+    ServerTimeModule
 ];

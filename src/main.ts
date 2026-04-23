@@ -14,7 +14,7 @@ async function bootstrap() {
   });
 
   app.use((req, res, next) => {
-    if (req.path.startsWith('/api-docs')) return next();
+    if (req.path.startsWith('/api-docs') || req.path.startsWith('/server-time')) return next();
     new HeadersMiddeware().use(req, res, next);
   });
   app.useGlobalInterceptors(new ResponseInterceptor());
