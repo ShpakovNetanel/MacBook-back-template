@@ -14,15 +14,6 @@ export class StandardTagService {
 
     async createTag(createTag: CreateTagDTO) {
         try {
-            const existingTagByLevel = await this.repository.fetchByUnitLevel(createTag.unitLevel, createTag.tagGroupId);
-
-            if (!isEmptyish(existingTagByLevel)) {
-                throw new BadGatewayException({
-                    message: 'רמה זו מחוברת לתגית מקבילה - תגית אחרת באותה קבוצת תגיות',
-                    type: MESSAGE_TYPES.FAILURE
-                })
-            }
-
             const existingTagByDescription = await this.repository.fetchByDescription(createTag.tag,
                 createTag.tagGroupId)
 
@@ -39,7 +30,7 @@ export class StandardTagService {
                 message: 'התגית נוצרה בהצלחה',
                 type: MESSAGE_TYPES.SUCCESS
             }
-        } catch (error) {
+        } catch (error: any) {
             console.log(error);
 
             throw new BadGatewayException({
@@ -68,7 +59,7 @@ export class StandardTagService {
                 message: 'התגית עודכנה בהצלחה',
                 type: MESSAGE_TYPES.SUCCESS
             }
-        } catch (error) {
+        } catch (error: any) {
             console.log(error);
 
             throw new BadGatewayException({
@@ -95,7 +86,7 @@ export class StandardTagService {
                 message: 'התגית נמחקה בהצלחה',
                 type: MESSAGE_TYPES.SUCCESS
             };
-        } catch (error) {
+        } catch (error: any) {
             throw new BadGatewayException({
                 message: error?.response?.message ?? 'לא היה ניתן למחוק את התגית',
                 type: MESSAGE_TYPES.FAILURE

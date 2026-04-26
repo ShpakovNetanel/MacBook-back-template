@@ -469,6 +469,7 @@ export class ReportRepository {
                 category: material.materialCategory?.mainCategory?.description ?? "",
                 unitOfMeasure: material.unitOfMeasurement ?? "",
                 type: MATERIAL_TYPES.ITEM,
+                isGroup: false
             })),
             ...standardGroups.map((standardGroup) => ({
                 id: standardGroup.id,
@@ -477,7 +478,8 @@ export class ReportRepository {
                 nickname: standardGroup.nickname?.nickname ?? "",
                 category: standardGroup.categoryGroup?.categoryDesc?.description ?? "קבוצה",
                 unitOfMeasure: "",
-                type: MATERIAL_TYPES.TOOL,
+                type: standardGroup.groupType,
+                isGroup: true
             }))
         ].sort((left, right) => left.id.localeCompare(right.id));
     }

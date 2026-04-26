@@ -10,7 +10,8 @@ import { StandardValuesModule } from "../standard-values/standard-values.module"
 @Module({
     imports: [SequelizeModule.forFeature([StandardTag]), StandardValuesModule],
     controllers: [StandardTagController],
-    providers: [StandardTagService, StandardTagRepository]
+    providers: [StandardTagService, StandardTagRepository],
+    exports: [StandardTagRepository]
 })
 
 export class StandardTagModule { }

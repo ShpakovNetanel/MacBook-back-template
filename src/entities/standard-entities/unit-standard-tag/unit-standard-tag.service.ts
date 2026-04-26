@@ -3,13 +3,32 @@ import { UnitStanadrdTagRepository } from "./unit-standard-tag.repository";
 import { CreateUnitStandardTag, DeleteUnitStandardTag } from "./unit-standard-tag.types";
 import { MESSAGE_TYPES } from "../../../constants";
 import { isDefined } from "class-validator";
+import { StandardTagRepository } from "../standard-tag/standard-tag.repository";
 
 @Injectable()
 export class UnitStandardTagService {
-    constructor(private readonly repository: UnitStanadrdTagRepository) { }
+    constructor(private readonly repository: UnitStanadrdTagRepository,
+        private readonly standardTagRepository: StandardTagRepository
+    ) { }
 
     async createUnitStandardTag(createUnitStandardTag: CreateUnitStandardTag) {
         try {
+            const tagLevel = await this.standardTagRepository.fetchById(createUnitStandardTag.tagId);
+
+            const unitOnAnotherTagOnSameLevel = await this.standardTagRepository.fetchIfUnitOnAnotherTagOnSameLevel(
+                createUnitStandardTag.tagId,
+                tagLevel!.unitLevel,
+                tagLevel!.tagGroupId,
+                createUnitStandardTag.unitId
+            );
+
+            if (unitOnAnotherTagOnSameLevel) {
+                throw new BadRequestException({
+                    message: 'יחידה זו מחוברת לתגית מקבילה - תגית אחרת באותה קבוצת תגיות',
+                    type: MESSAGE_TYPES.FAILURE
+                });
+            }
+
             const existingUnitStandardTag = await this.repository.fetchUnitStandardTag(createUnitStandardTag);
 
             if (isDefined(existingUnitStandardTag)) {
@@ -24,7 +43,7 @@ export class UnitStandardTagService {
                 message: 'היחידה התווספה אל התגית',
                 type: MESSAGE_TYPES.SUCCESS
             };
-        } catch (error) {
+        } catch (error: any) {
             console.log(error);
 
             throw new BadGatewayException({

@@ -82,7 +82,11 @@ const buildMaterialDto = (
     nickname: material?.nickname?.nickname ?? standardGroup?.nickname?.nickname ?? "",
     category: material?.materialCategory?.mainCategory?.description ?? getStandardGroupCategory(standardGroup),
     unitOfMeasure: material?.unitOfMeasurement ?? "יח",
-    type: isDefined(material) ? MATERIAL_TYPES.ITEM : isDefined(standardGroup) ? MATERIAL_TYPES.TOOL : MATERIAL_TYPES.ITEM,
+    type: isDefined(material)
+        ? MATERIAL_TYPES.ITEM
+        : isDefined(standardGroup)
+            ? standardGroup.groupType
+            : MATERIAL_TYPES.ITEM,
 });
 
 const resolveCommentByAuthor = (
@@ -354,7 +358,7 @@ const buildFavoriteItemTypes = (
     reportTypeIds: number[],
     unitId: number,
     materialId: string,
-    yesterdayInventoryQuantityByUnitMaterial: Map<string, number>
+    yesterdayInventoryQuantityByUnitMaterial: Map<string, number>,
 ): ReportItemTypeDto[] =>
     reportTypeIds.map((reportTypeId) => ({
         id: reportTypeId,
@@ -371,7 +375,7 @@ const buildFavoriteItems = (
     materialId: string,
     childrenUnits: UnitRelation[],
     reportTypeIds: number[],
-    yesterdayInventoryQuantityByUnitMaterial: Map<string, number>
+    yesterdayInventoryQuantityByUnitMaterial: Map<string, number>,
 ): ReportItemDto[] =>
     childrenUnits.map((child) => {
         const parentUnit = buildUnitDto(
@@ -393,7 +397,7 @@ const buildFavoriteItems = (
                 reportTypeIds,
                 child.relatedUnitId,
                 materialId,
-                yesterdayInventoryQuantityByUnitMaterial
+                yesterdayInventoryQuantityByUnitMaterial,
             ),
         };
     });
@@ -414,8 +418,12 @@ export const buildFavoriteReportsResponse = (
             items: buildFavoriteItems(
                 material.id,
                 childrenUnits,
-                reportTypeIds,
-                yesterdayInventoryQuantityByUnitMaterial
+                reportTypeIds.filter(reportTypeId =>
+                    material.type === MATERIAL_TYPES.TOOL
+                        ? reportTypeId === REPORT_TYPES.INVENTORY
+                        : true
+                ),
+                yesterdayInventoryQuantityByUnitMaterial,
             ),
         }))
         .sort((a, b) => a.material.id.localeCompare(b.material.id));

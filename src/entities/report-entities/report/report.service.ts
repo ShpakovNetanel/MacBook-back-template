@@ -146,7 +146,7 @@ export class ReportService {
             this.repository.fetchIncomingAllocationReports(date, recipientUnitId),
         ]);
 
-        const reports = [...baseReports, ...allocationReports];
+        const reports = [...baseReports, ...allocationReports, ...screenAllocationReports];
         const materialIds = collectMaterialIdsFromReports([
             ...reports,
             ...screenAllocationReports,
