@@ -38,7 +38,7 @@ export class StockService {
 
     if (Number(unit) === MATKAL_UNIT_ID) {
       allRelatedUnitIds.push(MARTACH_UNIT_ID);
-      rootUnitChildrenHierarchy.push({
+      rootUnitChildrenHierarchy.unshift({
         id: MARTACH_UNIT_ID,
         description: 'מרת"ח',
         level: UNIT_LEVELS.MATKAL,
