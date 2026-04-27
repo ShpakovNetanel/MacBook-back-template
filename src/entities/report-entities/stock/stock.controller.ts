@@ -1,11 +1,7 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Headers,
-  Post,
-  Put,
+  Query,
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
@@ -17,9 +13,9 @@ export class StockController {
 
   @Get('')
   async getUnitStocks(
-    @Headers('materialid') materialId: string,
-    @Headers('materialgroup') materialGroup: string,
-    @Headers('rootunit') rootUnit: Number,
+    @Query('materialid') materialId: string,
+    @Query('materialgroup') materialGroup: string,
+    @Query('rootunit') rootUnit: number,
     @Req() request: Request,
   ) {
     return this.service.getMaterialStocks(

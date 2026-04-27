@@ -54,5 +54,5 @@ export const enum UnitObjectTypes {
   Frame = 'O',
 }
 
-export const MATKAL_UNIT_ID = 48
+export const MATKAL_UNIT_ID = 1
 export const MARTACH_UNIT_ID = 111

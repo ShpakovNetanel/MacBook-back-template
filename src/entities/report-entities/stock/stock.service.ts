@@ -3,6 +3,7 @@ import { StockRepository } from './stock.repositroy';
 import { UnitHierarchyService } from 'src/entities/unit-entities/features/unit-hierarchy/unit-hierarchy.service';
 import { MaterialStandardGroupRepository } from 'src/entities/standard-entities/material-standard-group/material-standard-group.repository';
 import { UNIT_LEVELS, MATKAL_UNIT_ID, MARTACH_UNIT_ID } from 'src/constants';
+import { isEmptyish } from 'remeda';
 
 const GRADE_GROUPS: { grades: string[]; label: string }[] = [
   { grades: ['00', '01', '02', '04'], label: '0, 1, 2, 4' },
@@ -62,7 +63,7 @@ export class StockService {
       );
 
     const allStocks = await this.stockRepository.getMaterialStock(
-      materialId ?? materialGroupRelatedMaterials,
+      !isEmptyish(materialId) ? materialId : materialGroupRelatedMaterials,
       allRelatedUnitIds,
       date,
     );
