@@ -1,0 +1,86 @@
+name: Dynamic PR Environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: amitisho-droid/macbook-back-template
+
+jobs:
+  # 1. בניית האימג' ודחיפה (רק אם ה-PR פתוח או עודכן)
+  build-and-push:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.pull_request.number }}
+
+  # 2. פקודה לשרת להקים את הסביבה
+  deploy-pr-env:
+    needs: build-and-push
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy dynamic env to VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # התחברות ל-Registry מהשרת למקרה שהאימג' פרטי
+            echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # הפעלת סקריפט ה-Bash בשרת מהנתיב המעודכן ב-opt
+            /opt/app/deploy-pr.sh ${{ github.event.pull_request.number }} pr-${{ github.event.pull_request.number }} latest
+
+  # 3. הריסה וניקוי כשסוגרים את ה-PR
+  cleanup-pr-env:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Teardown env on VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "Tearing down PR-${{ github.event.pull_request.number }}..."
+            
+            # הגדרת התיקייה למחיקה
+            PR_DIR="/opt/app/deployments/pr-${{ github.event.pull_request.number }}"
+            
+            # אם התיקייה קיימת, מכבים ומוחקים את הקונטיינרים
+            if [ -d "$PR_DIR" ]; then
+              cd "$PR_DIR"
+              docker compose -f docker-compose.pr.yml down -v
+              cd ..
+              rm -rf "pr-${{ github.event.pull_request.number }}"
+            fi
+            
+            # מחיקת מסד הנתונים הספציפי
+            docker exec daba_db psql -U postgres -c "DROP DATABASE IF EXISTS pr_${{ github.event.pull_request.number }};"
+            
+            # ניקוי שאריות דיסק
+            docker image prune -af

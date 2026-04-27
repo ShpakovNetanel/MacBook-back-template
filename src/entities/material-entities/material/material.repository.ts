@@ -100,13 +100,40 @@ export class MaterialRepository {
             },
         });
 
+        const standardGroups = await this.standardGroupModel.findAll({
+            include: [{
+                association: "nickname",
+                required: false
+            }, {
+                association: "categoryGroup",
+                required: false,
+                include: [{
+                    association: "categoryDesc",
+                    attributes: ["description"],
+                    required: false
+                }]
+            }],
+            where: {
+                [Op.or]: [
+                    { id: { [Op.iLike]: `%${filter}%` } },
+                    { name: { [Op.iLike]: `%${filter}%` } }
+                ],
+                groupType: {
+                    [Op.in]: Number(tab) === REPORT_TYPES.INVENTORY
+                        ? [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
+                        : [MATERIAL_TYPES.ITEM]
+                }
+            }
+        });
 
         const materialIds = materials.map(material => material.id);
+        const groupsIds = standardGroups.map(group => group.id);
+
         const comments = materialIds.length === 0
             ? []
             : await this.commentModel.findAll({
                 where: {
-                    materialId: { [Op.in]: materialIds },
+                    materialId: { [Op.in]: [...materialIds, ...groupsIds] },
                     [Op.or]: [
                         { unitId },
                         { recipientUnitId: unitId }
@@ -114,17 +141,7 @@ export class MaterialRepository {
                 },
                 order: [["date", "DESC"]]
             });
-        const standardGroups = Number(tab) === REPORT_TYPES.INVENTORY
-            ? await this.standardGroupModel.findAll({
-                where: {
-                    [Op.or]: [
-                        { id: { [Op.iLike]: `%${filter}%` } },
-                        { name: { [Op.iLike]: `%${filter}%` } }
-                    ],
-                    groupType: MATERIAL_TYPES.TOOL
-                }
-            })
-            : [];
+
         const favoriteIds = await this.fetchFavoriteIds(unitId);
 
         return {
@@ -162,14 +179,28 @@ export class MaterialRepository {
                 centerId: SUPPLY_CENTERS.AMMO
             },
         });
-        const standardGroups = Number(tab) === 1
-            ? await this.standardGroupModel.findAll({
-                where: {
-                    id: { [Op.in]: materialsIds },
-                    groupType: MATERIAL_TYPES.TOOL
+        const standardGroups = await this.standardGroupModel.findAll({
+            include: [{
+                association: "nickname",
+                required: false
+            }, {
+                association: "categoryGroup",
+                required: false,
+                include: [{
+                    association: "categoryDesc",
+                    attributes: ["description"],
+                    required: false
+                }]
+            }],
+            where: {
+                id: { [Op.in]: materialsIds },
+                groupType: {
+                    [Op.in]: Number(tab) === REPORT_TYPES.INVENTORY
+                        ? [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
+                        : [MATERIAL_TYPES.ITEM]
                 }
-            })
-            : [];
+            }
+        })
         const favoriteIds = await this.fetchFavoriteIds(unitId);
 
         return {

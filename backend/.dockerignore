@@ -1,0 +1,21 @@
+# Dependencies - never send local node_modules into the build context
+node_modules
+
+# Local build output - Docker builds its own dist via RUN npm run build
+dist
+
+# Git internals
+.git
+.gitignore
+
+# Local env overrides
+.env
+.env.*
+
+# Editor / OS noise
+.vscode
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
