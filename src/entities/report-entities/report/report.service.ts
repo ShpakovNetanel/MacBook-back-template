@@ -7,6 +7,7 @@ import { formatDate, getPreviousCalendarDate } from "../../../utils/date";
 import { UnitHierarchyService } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.service";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
 import { UnitRepository } from "../../unit-entities/unit/unit.repository";
+import { NotificationService } from "../../../notifications/notification.service";
 import type { Report } from "./report.model";
 import { ReportRepository, type StandardGroupMaterialRow } from "./report.repository";
 import {
@@ -75,6 +76,7 @@ export class ReportService {
         private readonly sequelize: Sequelize,
         private readonly unitHierarchyService: UnitHierarchyService,
         private readonly unitRepository: UnitRepository,
+        private readonly notificationService: NotificationService,
     ) { }
 
     async saveReportsChanges(
@@ -319,6 +321,14 @@ export class ReportService {
             });
 
             await transaction.commit();
+
+            if (!isEmptyish(reportsToSave)) {
+                this.notificationService.notifyUnitUsers(
+                    screenUnitId,
+                    'שיגור',
+                    `דיווחים התקבלו מיחידה ${screenUnitId} במערכת דרישות והקצאות`,
+                ).catch(() => {});
+            }
 
             return {
                 type: isEmptyish(reportsToSave) ? MESSAGE_TYPES.WARNING : MESSAGE_TYPES.SUCCESS,
@@ -641,6 +651,16 @@ export class ReportService {
             });
 
             await transaction.commit();
+
+            const allocatedUnitIds = Array.from(new Set(saveAllocationsDTO.changes.map(c => c.unitId)));
+            for (const unitId of allocatedUnitIds) {
+                this.notificationService.notifyUnitUsers(
+                    unitId,
+                    'הקצאות',
+                    `הקצאות נשמרו עבור יחידתך במערכת דרישות והקצאות`,
+                ).catch(() => {});
+            }
+
             return {
                 type: MESSAGE_TYPES.SUCCESS,
                 message: "הקצאות נשמרו בהצלחה"
@@ -786,6 +806,7 @@ export class ReportService {
                 : null;
 
             await transaction.commit();
+
             return {
                 data: {
                     allocationDuhExport,

@@ -7,13 +7,15 @@ import { DeleteItemsDTO, EatAllocationDTO } from "./report.types";
 import { isNullish } from "remeda";
 import { UnitRepository } from "src/entities/unit-entities/unit/unit.repository";
 import { UnitStatusRepository } from "src/entities/unit-entities/units-statuses/units-statuses.repository";
+import { NotificationService } from "../../../notifications/notification.service";
 
 @Injectable()
 export class ReportItemService {
     constructor(private readonly repository: ReportItemRepository,
         private readonly unitRepository: UnitRepository,
         private readonly unitStatusRepository: UnitStatusRepository,
-        private readonly sequelize: Sequelize
+        private readonly sequelize: Sequelize,
+        private readonly notificationService: NotificationService,
     ) { }
 
     async eatAllocation(eatAllocation: EatAllocationDTO) {
@@ -68,6 +70,13 @@ export class ReportItemService {
             await this.repository.updateReportsItems(itemsToUpdate, transaction);
 
             await transaction.commit();
+
+            this.notificationService.notifyUnitUsers(
+                eatAllocation.unitId,
+                'משיכת הקצאות',
+                `נמשכה מההקצאה שלך ממק"ט ${eatAllocation.materialId} כמות ${eatAllocation.quantity} ע"י היחידה הממונה`,
+            ).catch(() => {});
+
             return {
                 message: 'ההקצאה נאכלה בהצלחה',
                 type: MESSAGE_TYPES.SUCCESS

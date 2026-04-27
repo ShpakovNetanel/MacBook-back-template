@@ -78,4 +78,21 @@ export class UnitStatusRepository {
             transaction,
         });
     }
+
+    async fetchStatusesForUnits(unitIds: number[], date: string): Promise<Map<number, number>> {
+        if (unitIds.length === 0) return new Map();
+
+        const statuses = await this.unitStatusModel.findAll({
+            where: {
+                unitId: { [Op.in]: unitIds },
+                date,
+            },
+        });
+
+        const map = new Map<number, number>();
+        for (const status of statuses) {
+            map.set(status.unitId, status.unitStatusId);
+        }
+        return map;
+    }
 }

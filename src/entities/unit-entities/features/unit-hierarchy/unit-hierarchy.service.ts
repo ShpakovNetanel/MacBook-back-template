@@ -15,6 +15,7 @@ import { ReportRoutingRepository } from "../../../report-entities/report/report-
 import { formatDate } from "../../../../utils/date";
 import { isDefined, isEmptyish } from "remeda";
 import { UserRepository } from "../../users/user.repository";
+import { NotificationService } from "../../../../notifications/notification.service";
 
 const DEFAULT_STATUS = { id: 0, description: "בדיווח" };
 const DATE_MISMATCH_ERROR = "לא ניתן לבצע שינוי היררכי על ימים עברו";
@@ -38,7 +39,8 @@ export class UnitHierarchyService {
     private readonly sequelize: Sequelize,
     private readonly unitStatusTypesRepository: UnitStatusRepository,
     private readonly reportRoutingRepository: ReportRoutingRepository,
-    private readonly unitUserRepository: UserRepository
+    private readonly unitUserRepository: UserRepository,
+    private readonly notificationService: NotificationService,
   ) { }
 
   async getHierarchyForUser(username: string, date: string): Promise<UnitHierarchyNode[]> {
@@ -287,6 +289,13 @@ export class UnitHierarchyService {
       );
 
       await transaction.commit();
+
+      this.notificationService.notifyUnitUsers(
+          lowerUnit,
+          'שינוי היררכי',
+          `היחידה הוסרה ומנותקת מהמערכת במערכת דרישות והקצאות`,
+      ).catch(() => {});
+
       return { message: "הקשר ההיררכי הוסר בהצלחה", type: MESSAGE_TYPES.SUCCESS };
     } catch (error) {
       await transaction.rollback();
@@ -426,6 +435,13 @@ export class UnitHierarchyService {
       );
 
       await transaction.commit();
+
+      this.notificationService.notifyUnitUsers(
+          upperUnit,
+          'שינוי היררכי',
+          `יחידה ${lowerUnit} הוספה למערכת דרישות והקצאות תחתמונות`,
+      ).catch(() => {});
+
       return { message: "הקשר ההיררכי נוסף בהצלחה", type: MESSAGE_TYPES.SUCCESS };
     } catch (error) {
       this.logger.error("Failed to add unit relation", error instanceof Error ? error.stack : String(error));
@@ -586,6 +602,13 @@ export class UnitHierarchyService {
       );
 
       await transaction.commit();
+
+      this.notificationService.notifyUnitUsers(
+          upperUnit,
+          'שינוי היררכי',
+          `יחידה ${lowerUnit} הועברה במערכת דרישות והקצאות`,
+      ).catch(() => {});
+
       return { message: "הקשר ההיררכי הועבר בהצלחה", type: MESSAGE_TYPES.SUCCESS };
     } catch (error) {
       await transaction.rollback();
