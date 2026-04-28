@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { isDefined } from "remeda";
 import { Op, Transaction } from "sequelize";
-import { UNIT_RELATION_TYPES } from "../../../../constants";
+import { OBJECT_TYPES, UNIT_RELATION_TYPES } from "../../../../constants";
 import { UnitId } from "../../unit-id/unit-id.model";
 import { UnitRelation } from "../../unit-relations/unit-relation.model";
 import { UnitStatusType } from "../../unit-status-type/unit-status-type.model";
@@ -76,7 +76,10 @@ export class UnitHierarchyRepository {
         },
         {
           attributes: ["unitId", "description", "tsavIrgunCodeId", "unitLevelId"],
-          model: Unit
+          model: Unit,
+          where: {
+            objectType: OBJECT_TYPES.UNIT,
+          }
         }]
       },
       {
@@ -99,12 +102,17 @@ export class UnitHierarchyRepository {
         },
         {
           attributes: ["unitId", "description", "tsavIrgunCodeId", "unitLevelId"],
-          model: Unit
+          model: Unit,
+          where: {
+            objectType: OBJECT_TYPES.UNIT,
+          }
         }]
       }],
       where: {
         ...unitRelationWhereClause,
         unitRelationId: UNIT_RELATION_TYPES.ZRA,
+        unitObjectType: OBJECT_TYPES.UNIT,
+        relatedUnitObjectType: OBJECT_TYPES.UNIT,
         startDate: { [Op.lte]: date },
         endDate: { [Op.gt]: date }
       }
@@ -117,6 +125,7 @@ export class UnitHierarchyRepository {
       where: {
         startDate: { [Op.lte]: date },
         endDate: { [Op.gt]: date },
+        objectType: OBJECT_TYPES.UNIT,
       },
       order: [["startDate", "DESC"]],
     });
@@ -139,6 +148,7 @@ export class UnitHierarchyRepository {
       where: {
         startDate: { [Op.lte]: date },
         endDate: { [Op.gt]: date },
+        objectType: OBJECT_TYPES.UNIT,
         [Op.or]: [
           ...(unitIds.length > 0 ? [{ unitId: { [Op.in]: unitIds } }] : []),
           ...(unitSimuls.length > 0 ? [{ tsavIrgunCodeId: { [Op.in]: unitSimuls } }] : []),
@@ -205,6 +215,8 @@ export class UnitHierarchyRepository {
       attributes: ["unitId", "relatedUnitId"],
       where: {
         unitRelationId: UNIT_RELATION_TYPES.ZRA,
+        unitObjectType: OBJECT_TYPES.UNIT,
+        relatedUnitObjectType: OBJECT_TYPES.UNIT,
         relatedUnitId: { [Op.in]: childUnitIds },
         startDate: { [Op.lte]: date },
         endDate: { [Op.gt]: date },
@@ -229,6 +241,8 @@ export class UnitHierarchyRepository {
         attributes: ["unitId", "relatedUnitId"],
         where: {
           unitRelationId: UNIT_RELATION_TYPES.ZRA,
+          unitObjectType: OBJECT_TYPES.UNIT,
+          relatedUnitObjectType: OBJECT_TYPES.UNIT,
           unitId: { [Op.in]: frontier },
           startDate: { [Op.lte]: date },
           endDate: { [Op.gt]: date },
@@ -259,6 +273,7 @@ export class UnitHierarchyRepository {
       attributes: ["unitId", "objectType", "unitLevelId"],
       where: {
         unitId: { [Op.in]: unitIds },
+        objectType: OBJECT_TYPES.UNIT,
         startDate: { [Op.lte]: date },
         endDate: { [Op.gt]: date },
       },
@@ -277,8 +292,8 @@ export class UnitHierarchyRepository {
       unitId: upperUnit,
       relatedUnitId: lowerUnit,
       unitRelationId: UNIT_RELATION_TYPES.ZRA,
-      unitObjectType: 'O',
-      relatedUnitObjectType: 'O',
+      unitObjectType: OBJECT_TYPES.UNIT,
+      relatedUnitObjectType: OBJECT_TYPES.UNIT,
       startDate: new Date(date),
       endDate: new Date("9999-12-31"),
     }, { transaction });
@@ -292,6 +307,8 @@ export class UnitHierarchyRepository {
     return this.unitRelationModel.findOne({
       where: {
         unitRelationId: UNIT_RELATION_TYPES.ZRA,
+        unitObjectType: OBJECT_TYPES.UNIT,
+        relatedUnitObjectType: OBJECT_TYPES.UNIT,
         relatedUnitId: lowerUnit,
         startDate: { [Op.lte]: date },
         endDate: { [Op.gt]: date },

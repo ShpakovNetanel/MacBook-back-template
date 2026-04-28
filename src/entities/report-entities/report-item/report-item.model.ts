@@ -11,6 +11,7 @@ export type IReportItem = {
   materialId: string;
   reportingLevel: number;
   reportingUnitId: number;
+  reportingUnitObjectType: string;
   reportedQuantity?: number | null;
   confirmedQuantity?: number | null;
   balanceQuantity?: number | null;
@@ -39,6 +40,9 @@ export class ReportItem extends Model<IReportItem> {
   @ForeignKey(() => UnitId)
   @Column({ field: "reporting_unit", type: DataType.INTEGER })
   declare reportingUnitId: number;
+
+  @Column({ field: "reporting_unit_object_type", type: DataType.STRING(2) })
+  declare reportingUnitObjectType: string;
 
   @Column({ field: "reported_quantity", type: DataType.DECIMAL })
   declare reportedQuantity: string | null;

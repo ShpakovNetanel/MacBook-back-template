@@ -1,6 +1,6 @@
 import { BadGatewayException } from "@nestjs/common";
 import { isDefined, isEmptyish, isNullish } from "remeda";
-import { MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS, UNIT_STATUSES } from "../../../../constants";
+import { MESSAGE_TYPES, OBJECT_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS, UNIT_RELATION_TYPES, UNIT_STATUSES } from "../../../../constants";
 import { UnitRelation } from "../../../unit-entities/unit-relations/unit-relation.model";
 import { formatDate } from "../../../../utils/date";
 import { Report } from "../report.model";
@@ -19,8 +19,11 @@ export type CalcReport = {
         id: number;
         unitId: number;
         recipientUnitId: number;
+        unitObjectType: string;
+        recipientUnitObjectType: string;
         reportTypeId: number;
-        reporterId: string;
+        reporterUnitId: number;
+        reporterUnitObjectType: string;
         createdOn: string;
         createdBy: string;
         createdAt: string;
@@ -28,7 +31,8 @@ export type CalcReport = {
             [materialId: string]: {
                 materialId: string;
                 reportingUnitId: number;
-                reportingUnitLevel: number;
+                reportingUnitObjectType: string;
+                reportingLevel: number;
                 confirmedQuantity: number;
                 reportedQuantity: number;
                 status: string;
@@ -310,9 +314,12 @@ const upsertReports = (
     if (!reports[reportKey]) {
         reports[reportKey] = {
             unitId,
+            unitObjectType: OBJECT_TYPES.UNIT,
             recipientUnitId: parentUnit.id,
             reportTypeId: reportType,
-            reporterId: unitReport?.dataValues?.reporterUnitId ?? screenUnitId,
+            recipientUnitObjectType: OBJECT_TYPES.UNIT,
+            reporterUnitId: unitReport?.dataValues?.reporterUnitId ?? screenUnitId,
+            reporterUnitObjectType: unitReport?.dataValues?.reporterUnitObjectType ?? OBJECT_TYPES.UNIT,
             createdBy: unitReport?.dataValues?.createdBy ?? username,
             createdOn: unitReport?.dataValues?.createdOn ?? date,
             createdAt: unitReport?.dataValues?.createdAt ?? formattedTime,
@@ -335,6 +342,7 @@ const upsertReports = (
                 reports[reportKey].items[material.materialId] = {
                 materialId: material.materialId,
                 reportingUnitId: parentUnit?.id,
+                reportingUnitObjectType: OBJECT_TYPES.UNIT,
                 reportingLevel: parentUnit?.level,
                 reportedQuantity: quantity,
                 confirmedQuantity: quantity,
@@ -351,6 +359,7 @@ const upsertReports = (
             reports[reportKey].items[reportItem.materialId] = {
                 materialId: reportItem.materialId,
                 reportingUnitId: parentUnit?.id,
+                reportingUnitObjectType: OBJECT_TYPES.UNIT,
                 reportingLevel: parentUnit?.level,
                 reportedQuantity: Number(reportItem.confirmedQuantity),
                 confirmedQuantity: Number(reportItem.confirmedQuantity),

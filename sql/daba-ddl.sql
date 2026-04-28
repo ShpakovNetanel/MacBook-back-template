@@ -298,6 +298,7 @@ CREATE TABLE shoval.reports (
     recipient_unit_id integer,
     recipient_unit_object_type character varying(2) NOT NULL,
     reporter_unit_id integer,
+    reporter_unit_object_type character varying(2) NOT NULL,
     created_on date,
     created_at time without time zone,
     created_by character varying(20),

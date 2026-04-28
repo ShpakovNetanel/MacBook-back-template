@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Transaction } from "sequelize";
+import { OBJECT_TYPES } from "../../../constants";
 import { Report } from "./report.model";
 
 @Injectable()
@@ -20,12 +21,15 @@ export class ReportRoutingRepository {
     return this.reportModel.update(
       {
         recipientUnitId,
+        recipientUnitObjectType: OBJECT_TYPES.UNIT,
         reporterUnitId,
+        reporterUnitObjectType: OBJECT_TYPES.UNIT,
         createdBy,
       },
       {
         where: {
           unitId,
+          unitObjectType: OBJECT_TYPES.UNIT,
           createdOn: date,
         },
         transaction,

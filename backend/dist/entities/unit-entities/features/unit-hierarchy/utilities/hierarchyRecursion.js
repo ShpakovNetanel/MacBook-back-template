@@ -1,0 +1,107 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getHierarchy = exports.getRootUnit = exports.getEmergencyUnitIds = void 0;
+const constants_1 = require("../../../../../constants");
+const DEFAULT_STATUS = { id: 0, description: "בדיווח" };
+const getStatusFromUnit = (unit) => {
+    const status = unit?.unitStatus?.[0]?.unitStatus;
+    return status?.dataValues ?? (status ? { id: status.id, description: status.description } : DEFAULT_STATUS);
+};
+const getEmergencyUnitIds = (unitRelations) => {
+    const emergencyUnitIds = new Set();
+    const parentIdsByChild = new Map();
+    const gdudUnitIds = [];
+    for (const relation of unitRelations) {
+        const parentId = relation?.dataValues?.unitId;
+        const childId = relation?.dataValues?.relatedUnitId;
+        const childLevel = relation?.relatedUnit?.activeDetail?.dataValues?.unitLevelId ?? 0;
+        if (!childId)
+            continue;
+        if (childLevel === constants_1.UNIT_LEVELS.GDUD) {
+            emergencyUnitIds.add(childId);
+            gdudUnitIds.push(childId);
+        }
+        if (parentId) {
+            const parentIds = parentIdsByChild.get(childId) ?? [];
+            parentIds.push(parentId);
+            parentIdsByChild.set(childId, parentIds);
+        }
+    }
+    const queue = [...gdudUnitIds];
+    while (queue.length > 0) {
+        const childId = queue.shift();
+        if (!childId)
+            continue;
+        const parentIds = parentIdsByChild.get(childId) ?? [];
+        for (const parentId of parentIds) {
+            if (emergencyUnitIds.has(parentId))
+                continue;
+            emergencyUnitIds.add(parentId);
+            queue.push(parentId);
+        }
+    }
+    return emergencyUnitIds;
+};
+exports.getEmergencyUnitIds = getEmergencyUnitIds;
+const getRootUnit = (unitRelations, unitId, emergencyUnitIds = (0, exports.getEmergencyUnitIds)(unitRelations)) => {
+    const relation = unitRelations.find((rel) => rel?.dataValues?.unitId === unitId);
+    const unit = relation?.unit?.activeDetail?.dataValues;
+    return {
+        id: unitId,
+        description: unit?.description ?? "",
+        level: unit?.unitLevelId ?? 0,
+        simul: unit?.tsavIrgunCodeId ?? "",
+        isEmergencyUnit: emergencyUnitIds.has(unitId),
+        status: getStatusFromUnit(relation?.unit),
+        parent: null,
+    };
+};
+exports.getRootUnit = getRootUnit;
+const getUnit = (relation, emergencyUnitIds) => {
+    const unit = relation?.relatedUnit?.activeDetail?.dataValues;
+    const parentUnit = relation?.unit?.activeDetail?.dataValues;
+    const unitId = unit?.unitId ?? 0;
+    return {
+        description: unit?.description ?? '',
+        id: unitId,
+        level: unit?.unitLevelId ?? 0,
+        simul: unit?.tsavIrgunCodeId ?? '',
+        isEmergencyUnit: emergencyUnitIds.has(unitId),
+        status: getStatusFromUnit(relation?.relatedUnit),
+        parent: {
+            description: parentUnit?.description ?? '',
+            id: parentUnit?.unitId ?? 0,
+            level: parentUnit?.unitLevelId ?? 0,
+            simul: parentUnit?.tsavIrgunCodeId ?? '',
+            status: getStatusFromUnit(relation?.unit),
+        }
+    };
+};
+const getHierarchy = (unitsRelations, unitsChildren, emergencyUnitIds = (0, exports.getEmergencyUnitIds)(unitsRelations)) => {
+    const visited = new Set();
+    const childrenByParent = new Map();
+    for (const relation of unitsRelations) {
+        const parentId = relation?.dataValues?.unitId;
+        const siblings = childrenByParent.get(parentId) ?? [];
+        siblings.push(relation);
+        childrenByParent.set(parentId, siblings);
+    }
+    const buildHierarchy = (relations) => {
+        const units = [];
+        for (const relation of relations) {
+            const childId = relation?.dataValues?.relatedUnitId;
+            if (!childId || visited.has(childId))
+                continue;
+            visited.add(childId);
+            units.push(getUnit(relation, emergencyUnitIds));
+            const descendants = childrenByParent.get(childId);
+            if (descendants?.length) {
+                units.push(...buildHierarchy(descendants));
+            }
+        }
+        return units;
+    };
+    return buildHierarchy(unitsChildren);
+};
+exports.getHierarchy = getHierarchy;
+//# sourceMappingURL=hierarchyRecursion.js.map

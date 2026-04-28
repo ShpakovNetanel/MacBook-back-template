@@ -1,4 +1,4 @@
-import { RECORD_STATUS, REPORT_TYPES } from "../../../../constants";
+import { OBJECT_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_STATUSES } from "../../../../constants";
 import { Report } from "../report.model";
 import { IUnit } from "../../../unit-entities/unit/unit.model";
 import { combineDateAndTime } from "../../../../utils/date";
@@ -55,8 +55,11 @@ const buildHeader = (
 ) => ({
     reportTypeId: REPORT_TYPES.ALLOCATION,
     unitId,
+    unitObjectType: OBJECT_TYPES.UNIT,
     recipientUnitId,
+    recipientUnitObjectType: OBJECT_TYPES.UNIT,
     reporterUnitId: unitId,
+    reporterUnitObjectType: OBJECT_TYPES.UNIT,
     createdOn: screenDate,
     createdBy: username,
     createdAt: creationTime
@@ -142,11 +145,13 @@ export const buildAllocationChangesFromReports = (reports: Report[], isDvhExcel:
 
 export const buildDownloadAllocationChanges = ({
     isMatkal,
+    matkalStatusId,
     outgoingAllocationReports,
     requisitionReports,
     isDvhExcel
 }: {
     isMatkal: boolean;
+    matkalStatusId?: number | null;
     outgoingAllocationReports: Report[];
     requisitionReports: Report[];
     isDvhExcel: boolean;
@@ -155,11 +160,12 @@ export const buildDownloadAllocationChanges = ({
         return buildAllocationChangesFromReports(outgoingAllocationReports, isDvhExcel);
     }
 
-    if (outgoingAllocationReports.length > 0) {
-        return buildAllocationChangesFromReports(outgoingAllocationReports, isDvhExcel);
+    const statusId = matkalStatusId ?? UNIT_STATUSES.REQUESTING;
+    if (statusId === UNIT_STATUSES.REQUESTING) {
+        return buildAllocationChangesFromRequisitionReports(requisitionReports);
     }
 
-    return buildAllocationChangesFromRequisitionReports(requisitionReports);
+    return buildAllocationChangesFromReports(outgoingAllocationReports, isDvhExcel);
 };
 
 export const buildAllocationsChanges = ({
@@ -193,6 +199,7 @@ export const buildAllocationsChanges = ({
             reportedQuantity: change.quantity,
             reportingLevel: screenUnit.unitLevelId,
             reportingUnitId: screenUnit.unitId,
+            reportingUnitObjectType: OBJECT_TYPES.UNIT,
             ...buildBaseItem(username, creationTime, modifiedAt),
         } as IReportsChanges["items"][0]);
     }
@@ -234,6 +241,7 @@ export const buildConfirmedAllocationChanges = ({
             balanceQuantity: (change.existingBalanceQuantity ?? 0) + change.quantity,
             reportingLevel: screenUnit.unitLevelId,
             reportingUnitId: screenUnit.unitId,
+            reportingUnitObjectType: OBJECT_TYPES.UNIT,
             ...buildBaseItem(username, creationTime, modifiedAt),
         } as IReportsChanges["items"][0]);
     }
@@ -295,6 +303,7 @@ export const buildNextLevelAllocationDraftChanges = ({
                 reportedQuantity: requisitionByRecipientChildMaterial.get(`${change.unitId}:${recipientUnitId}:${change.materialId}`) ?? 0,
                 reportingLevel: childLevel,
                 reportingUnitId: change.unitId,
+                reportingUnitObjectType: OBJECT_TYPES.UNIT,
                 ...buildBaseItem(username, creationTime, modifiedAt),
             } as IReportsChanges["items"][0]);
         }
@@ -341,6 +350,7 @@ export const buildAllocationBalanceUpdates = ({
                 balanceQuantity: currentBalance - deduction,
                 reportingLevel: item.reportingLevel,
                 reportingUnitId: item.reportingUnitId,
+                reportingUnitObjectType: item.reportingUnitObjectType ?? OBJECT_TYPES.UNIT,
                 status: item.status ?? RECORD_STATUS.ACTIVE,
                 changedBy: username,
                 changedAt: creationTime,
@@ -354,8 +364,11 @@ export const buildAllocationBalanceUpdates = ({
             header: {
                 reportTypeId: report.reportTypeId,
                 unitId: report.unitId,
+                unitObjectType: report.unitObjectType ?? OBJECT_TYPES.UNIT,
                 recipientUnitId: report.recipientUnitId,
+                recipientUnitObjectType: report.recipientUnitObjectType ?? OBJECT_TYPES.UNIT,
                 reporterUnitId: report.reporterUnitId,
+                reporterUnitObjectType: report.reporterUnitObjectType ?? OBJECT_TYPES.UNIT,
                 createdOn: report.createdOn,
                 createdBy: report.createdBy,
                 createdAt: report.createdAt,
