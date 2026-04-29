@@ -1,4 +1,5 @@
 import { combineDateAndTime } from "../../../../utils/date";
+import { OBJECT_TYPES } from "../../../../constants";
 import type { IReportsChanges, SaveCommitteesBody } from "../report.types";
 
 type BuildReportsParams = {
@@ -38,8 +39,11 @@ export const buildReportsToSave = ({
                 header: {
                     reportTypeId: change.type,
                     unitId: change.unitId,
+                    unitObjectType: OBJECT_TYPES.UNIT,
                     recipientUnitId: parentUnitId,
+                    recipientUnitObjectType: OBJECT_TYPES.UNIT,
                     reporterUnitId: reportingUnitId,
+                    reporterUnitObjectType: OBJECT_TYPES.UNIT,
                     createdOn: createdOnDate,
                     createdAt,
                     createdBy
@@ -53,6 +57,7 @@ export const buildReportsToSave = ({
             materialId: change.materialId,
             reportingLevel,
             reportingUnitId,
+            reportingUnitObjectType: OBJECT_TYPES.UNIT,
             confirmedQuantity: change.quantity,
             status: change.status,
             changedAt: createdAt,

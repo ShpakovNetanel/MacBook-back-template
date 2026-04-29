@@ -601,6 +601,10 @@ export class UnitHierarchyService {
     return this.repository.fetchActive(date) as Promise<UnitRelation[]>;
   }
 
+  fetchUnitStatusForDate(unitId: number, date: string) {
+    return this.repository.fetchUnitStatusForDate(unitId, date);
+  }
+
   buildEmergencyUnitLookup(relations: UnitRelation[]): Record<number, boolean> {
     const lookup: Record<number, boolean> = {};
     for (const unitId of getEmergencyUnitIds(relations)) {

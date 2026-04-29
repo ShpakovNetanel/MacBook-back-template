@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Op, Transaction } from "sequelize";
+import { OBJECT_TYPES } from "../../../constants";
 import { Report } from "../report/report.model";
 import { IReportItem, ReportItem } from "./report-item.model";
 import { ReportItemKey } from "./report.types";
@@ -15,11 +16,15 @@ export class ReportItemRepository {
             include: [{
                 model: ReportItem,
                 where: {
-                    materialId: reportItemKey.materialId
+                    materialId: reportItemKey.materialId,
+                    reportingUnitObjectType: OBJECT_TYPES.UNIT,
                 }
             }],
             where: {
+                unitObjectType: OBJECT_TYPES.UNIT,
                 recipientUnitId: reportItemKey.recipientUnitId,
+                recipientUnitObjectType: OBJECT_TYPES.UNIT,
+                reporterUnitObjectType: OBJECT_TYPES.UNIT,
                 reportTypeId: { [Op.in]: reportItemKey.reportsTypesIds },
                 createdOn: reportItemKey.date
             }

@@ -3,7 +3,7 @@ import { InjectModel } from "@nestjs/sequelize";
 import { isEmpty, isNullish } from "remeda";
 import { col, Op, where } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
-import { MATERIAL_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_RELATION_TYPES, UNIT_STATUSES } from "../../../constants";
+import { MATERIAL_TYPES, OBJECT_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_RELATION_TYPES, UNIT_STATUSES } from "../../../constants";
 import { MainCategory } from "../../material-entities/categories/categories.model";
 import { MaterialCategory } from "../../material-entities/material-category/material-category.model";
 import { MaterialNickname } from "../../material-entities/material-nickname/material-nickname.model";
@@ -92,6 +92,8 @@ export class ReportRepository {
             attributes: ["unitId", "relatedUnitId"],
             where: {
                 unitRelationId: UNIT_RELATION_TYPES.ZRA,
+                unitObjectType: OBJECT_TYPES.UNIT,
+                relatedUnitObjectType: OBJECT_TYPES.UNIT,
                 relatedUnitId: { [Op.in]: childUnitIds },
                 startDate: { [Op.lte]: date },
                 endDate: { [Op.gt]: date }
@@ -134,6 +136,8 @@ export class ReportRepository {
                 }],
                 where: {
                     unitRelationId: UNIT_RELATION_TYPES.ZRA,
+                    unitObjectType: OBJECT_TYPES.UNIT,
+                    relatedUnitObjectType: OBJECT_TYPES.UNIT,
                     unitId: { [Op.in]: units },
                     startDate: { [Op.lte]: date },
                     endDate: { [Op.gt]: date }
@@ -174,7 +178,10 @@ export class ReportRepository {
             where: {
                 reportTypeId: reportType,
                 createdOn: new Date(date),
-                unitId: { [Op.in]: units }
+                unitId: { [Op.in]: units },
+                unitObjectType: OBJECT_TYPES.UNIT,
+                recipientUnitObjectType: OBJECT_TYPES.UNIT,
+                reporterUnitObjectType: OBJECT_TYPES.UNIT,
             }
         })
     }
@@ -193,6 +200,9 @@ export class ReportRepository {
                 reportTypeId: reportType,
                 createdOn: new Date(date),
                 unitId: { [Op.in]: unitIds },
+                unitObjectType: OBJECT_TYPES.UNIT,
+                recipientUnitObjectType: OBJECT_TYPES.UNIT,
+                reporterUnitObjectType: OBJECT_TYPES.UNIT,
             },
             include: [{
                 association: "items",
@@ -201,6 +211,7 @@ export class ReportRepository {
                 where: {
                     materialId: { [Op.in]: materialIds },
                     status: RECORD_STATUS.ACTIVE,
+                    reportingUnitObjectType: OBJECT_TYPES.UNIT,
                 },
             }],
         });
@@ -243,6 +254,9 @@ export class ReportRepository {
                 reportTypeId: { [Op.in]: reportTypeIds },
                 createdOn: new Date(date),
                 unitId: { [Op.in]: unitIds },
+                unitObjectType: OBJECT_TYPES.UNIT,
+                recipientUnitObjectType: OBJECT_TYPES.UNIT,
+                reporterUnitObjectType: OBJECT_TYPES.UNIT,
             },
             include: [{
                 association: "items",
@@ -251,6 +265,7 @@ export class ReportRepository {
                 where: {
                     materialId: { [Op.in]: materialIds },
                     status: RECORD_STATUS.ACTIVE,
+                    reportingUnitObjectType: OBJECT_TYPES.UNIT,
                 },
             }],
         });
@@ -335,7 +350,10 @@ export class ReportRepository {
     ): Promise<Report[]> {
         return this.reportModel.findAll({
             where: {
+                unitObjectType: OBJECT_TYPES.UNIT,
                 recipientUnitId,
+                recipientUnitObjectType: OBJECT_TYPES.UNIT,
+                reporterUnitObjectType: OBJECT_TYPES.UNIT,
                 createdOn: date,
                 reportTypeId: REPORT_TYPES.ALLOCATION,
             },
@@ -494,7 +512,10 @@ export class ReportRepository {
         const latestCreatedOn: Date = await this.reportModel.max("createdOn", {
             where: {
                 unitId: { [Op.in]: descendantIds },
+                unitObjectType: OBJECT_TYPES.UNIT,
                 recipientUnitId: { [Op.in]: unitIds },
+                recipientUnitObjectType: OBJECT_TYPES.UNIT,
+                reporterUnitObjectType: OBJECT_TYPES.UNIT,
                 createdOn: { [Op.lt]: date },
                 reportTypeId: { [Op.in]: [REPORT_TYPES.REQUEST, REPORT_TYPES.INVENTORY, REPORT_TYPES.USAGE] }
             }
@@ -539,7 +560,10 @@ export class ReportRepository {
         return this.reportModel.findAll({
             where: {
                 unitId: { [Op.in]: unitIds },
+                unitObjectType: OBJECT_TYPES.UNIT,
                 recipientUnitId: { [Op.in]: unitIds },
+                recipientUnitObjectType: OBJECT_TYPES.UNIT,
+                reporterUnitObjectType: OBJECT_TYPES.UNIT,
                 createdOn: date,
                 reportTypeId: { [Op.in]: [REPORT_TYPES.REQUEST, REPORT_TYPES.INVENTORY, REPORT_TYPES.USAGE] },
             },
@@ -578,10 +602,16 @@ export class ReportRepository {
             createdOn: string;
             reportTypeId: { [Op.in]: number[] };
             unitId?: { [Op.in]: number[] };
+            unitObjectType: string;
             recipientUnitId?: { [Op.in]: number[] };
+            recipientUnitObjectType: string;
+            reporterUnitObjectType: string;
         } = {
             createdOn: date,
-            reportTypeId: { [Op.in]: reportTypeIds }
+            reportTypeId: { [Op.in]: reportTypeIds },
+            unitObjectType: OBJECT_TYPES.UNIT,
+            recipientUnitObjectType: OBJECT_TYPES.UNIT,
+            reporterUnitObjectType: OBJECT_TYPES.UNIT,
         };
 
         if (reportingUnitIds.length > 0) {
@@ -622,7 +652,8 @@ export class ReportRepository {
                 attributes: ["unitId", "description", "unitLevelId", "startDate", "tsavIrgunCodeId"],
                 where: {
                     startDate: { [Op.lte]: date },
-                    endDate: { [Op.gt]: date }
+                    endDate: { [Op.gt]: date },
+                    objectType: OBJECT_TYPES.UNIT,
                 }
             }, {
                 association: "unitStatus",
@@ -645,7 +676,8 @@ export class ReportRepository {
                 attributes: ["unitId", "description", "unitLevelId", "startDate", "tsavIrgunCodeId"],
                 where: {
                     startDate: { [Op.lte]: date },
-                    endDate: { [Op.gt]: date }
+                    endDate: { [Op.gt]: date },
+                    objectType: OBJECT_TYPES.UNIT,
                 }
             }, {
                 association: "unitStatus",
@@ -660,7 +692,7 @@ export class ReportRepository {
                 }],
             }]
         }, {
-            attributes: ['reportedQuantity', 'confirmedQuantity', 'balanceQuantity', 'status', 'materialId', 'reportingLevel', 'reportingUnitId'],
+            attributes: ['reportedQuantity', 'confirmedQuantity', 'balanceQuantity', 'status', 'materialId', 'reportingLevel', 'reportingUnitId', 'reportingUnitObjectType'],
             model: ReportItem,
             as: "items",
             include: [{
@@ -723,7 +755,8 @@ export class ReportRepository {
                                                AND shoval.report_items."material_id" = "items"."material_id"
                                                AND shoval.report_items."status" IN (${itemStatuses.map((status) => `'${status}'`).join(", ")}))`)
                 },
-                status: { [Op.in]: itemStatuses }
+                status: { [Op.in]: itemStatuses },
+                reportingUnitObjectType: OBJECT_TYPES.UNIT,
             },
 
         }];

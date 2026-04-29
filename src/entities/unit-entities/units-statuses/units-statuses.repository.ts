@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Op } from "sequelize";
 import { Transaction } from "sequelize";
-import { UNIT_RELATION_TYPES } from "../../../constants";
+import { OBJECT_TYPES, UNIT_RELATION_TYPES } from "../../../constants";
 import { UnitRelation } from "../unit-relations/unit-relation.model";
 import { IUnitStatus, UnitStatus } from "./units-statuses.model";
 
@@ -27,6 +27,8 @@ export class UnitStatusRepository {
                 attributes: ["relatedUnitId"],
                 where: {
                     unitRelationId: UNIT_RELATION_TYPES.ZRA,
+                    unitObjectType: OBJECT_TYPES.UNIT,
+                    relatedUnitObjectType: OBJECT_TYPES.UNIT,
                     unitId: { [Op.in]: frontier },
                     startDate: { [Op.lt]: now },
                     endDate: { [Op.gte]: now }

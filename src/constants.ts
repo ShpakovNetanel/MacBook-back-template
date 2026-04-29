@@ -17,6 +17,10 @@ export const UNIT_RELATION_TYPES = {
     ZRA: '1'
 }
 
+export const OBJECT_TYPES = {
+    UNIT: 'O'
+}
+
 export const MESSAGE_TYPES = {
     FATAL: 'Fatal',
     FAILURE: 'Failure',

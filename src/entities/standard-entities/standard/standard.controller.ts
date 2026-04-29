@@ -1,6 +1,6 @@
 import { Controller, Get, Req } from "@nestjs/common";
 import { StandardService } from "./standard.service";
-import { StandardDrawerDataDto } from "./standard.types";
+import { StandardResponse } from "./standard.types";
 
 @Controller("/standard")
 export class StandardController {
@@ -13,9 +13,8 @@ export class StandardController {
     }
 
     @Get("")
-    getStandard(@Req() request: Request): Promise<StandardDrawerDataDto[]> {
+    getStandard(@Req() request: Request): Promise<StandardResponse> {
         const unitId = Number(request.headers["unit"]);
-        return this.service.getStandardDrawerData(unitId, request["date"]);
+        return this.service.getStandards(unitId, request["date"]);
     }
 }
-

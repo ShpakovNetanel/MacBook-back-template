@@ -9,8 +9,11 @@ export type IReport = {
   id?: number;
   reportTypeId: number;
   unitId: number;
+  unitObjectType: string;
   recipientUnitId: number | null;
+  recipientUnitObjectType: string;
   reporterUnitId?: number | null;
+  reporterUnitObjectType: string;
   createdOn?: Date | null;
   createdAt?: string | null;
   createdBy: string | null;
@@ -28,11 +31,20 @@ export class Report extends Model<IReport> {
   @Column({ field: "unit_id", type: DataType.INTEGER })
   declare unitId: number;
 
+  @Column({ field: "unit_object_type", type: DataType.STRING(2) })
+  declare unitObjectType: string;
+
   @Column({ field: "recipient_unit_id", type: DataType.INTEGER })
   declare recipientUnitId: number | null;
 
+  @Column({ field: "recipient_unit_object_type", type: DataType.STRING(2) })
+  declare recipientUnitObjectType: string;
+
   @Column({ field: "reporter_unit_id", type: DataType.INTEGER })
   declare reporterUnitId: number | null;
+
+  @Column({ field: "reporter_unit_object_type", type: DataType.STRING(2) })
+  declare reporterUnitObjectType: string;
 
   @Column({ field: "created_on", type: DataType.DATE })
   declare createdOn: Date | null;

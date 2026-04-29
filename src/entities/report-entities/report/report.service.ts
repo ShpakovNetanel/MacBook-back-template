@@ -578,7 +578,10 @@ export class ReportService {
             });
         }
 
-        const directChildRelations = await this.unitHierarchyService.fetchLowerUnits(date, screenUnitId) as UnitRelation[];
+        const [directChildRelations, matkalStatus] = await Promise.all([
+            this.unitHierarchyService.fetchLowerUnits(date, screenUnitId) as Promise<UnitRelation[]>,
+            this.unitHierarchyService.fetchUnitStatusForDate(screenUnitId, date),
+        ]);
         const directChildIds = sortNumeric(directChildRelations.map((relation) => relation.relatedUnitId));
 
         const [outgoingAllocationReports, requisitionReports] = await Promise.all([
@@ -601,6 +604,7 @@ export class ReportService {
 
         const allocationChanges = buildDownloadAllocationChanges({
             isMatkal: true,
+            matkalStatusId: matkalStatus?.unitStatusId,
             outgoingAllocationReports,
             requisitionReports,
             isDvhExcel: true
@@ -666,7 +670,12 @@ export class ReportService {
 
         try {
             const unitDetails = await this.unitRepository.fetchActiveUnitDetails(date, screenUnitId);
-            const activeRelations = await this.unitHierarchyService.fetchActiveRelations(date) as UnitRelation[];
+            const [activeRelations, matkalStatus] = await Promise.all([
+                this.unitHierarchyService.fetchActiveRelations(date) as Promise<UnitRelation[]>,
+                unitDetails?.unitLevelId === UNIT_LEVELS.MATKAL
+                    ? this.unitHierarchyService.fetchUnitStatusForDate(screenUnitId, date)
+                    : Promise.resolve(null)
+            ]);
             const childIdsByParent = buildChildIdsByParent(activeRelations);
             const unitLevelById = buildUnitLevelById(activeRelations);
             const directChildIds = sortNumeric(childIdsByParent.get(screenUnitId) ?? []);
@@ -699,6 +708,7 @@ export class ReportService {
 
             const allocationChanges = buildDownloadAllocationChanges({
                 isMatkal: unitDetails?.unitLevelId === UNIT_LEVELS.MATKAL,
+                matkalStatusId: matkalStatus?.unitStatusId,
                 outgoingAllocationReports: currentOutgoingAllocationReports,
                 requisitionReports: matkalRequisitionReports,
                 isDvhExcel: false

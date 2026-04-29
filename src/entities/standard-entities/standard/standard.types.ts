@@ -1,74 +1,57 @@
-// ─── Response DTOs matching frontend StandardDrawerData[] shape ───────────────
-// Reference: MacBook-front-template/src/types/standardDrawer.ts
-// Reference: StandardDrawer/Docs/TECHNICAL.md#StandardDrawerData Response Shape
+import { MaterialDto, UnitDto } from "src/entities/report-entities/report/report.types";
 
-export type StandardMaterialDto = {
+export type StandardMaterialCategory = {
     id: string;
     description: string;
 };
 
-export type StandardManagingUnitDto = {
-    id: number;
-    description: string;
-    level: number;
-    level_description: string;
-};
+export type MaterialCategory = StandardMaterialCategory;
 
-export type StandardMaterialCategoryDto = {
-    id: string;       // category_desc.id — VARCHAR(9)
-    name: string;     // category_desc.description
-};
-
-export type StandardOriginDto = {
-    standard_attribute_id: number;
-    managing_unit: string;
-    item_group_id: string;
-    tool_group_id: string | null;
-    tool_group_name: string | null;
-    tool_material_ids: string[];
-    tool_quantity: number | null;
-    per_tool_qty: number | null;
+export type StandardOrigin = {
+    standardId: number;
+    toolGroups: MaterialDto | null;
+    toolMaterialIds: string[];
+    toolStockQuantity: number | null;
+    perToolStockQuantity: number | null;
     tags: { level: number; tag: string }[];
     quantity: number | null;
+    note: string | null;
 };
 
-export type StandardChildQuantityDto = {
-    unit_id: number;
-    unit_description: string;
-    material: StandardMaterialDto;
-    quantity: number;
-    tool_quantity: number | null;
-    stock_quantity: number;
-    origins: StandardOriginDto[];
+export type ChildStandard = {
+    unit: UnitDto;
+    standardQuantity: number;
+    stockQuantity: number;
+    requisitionQuantity: number;
+    origins: StandardOrigin[];
 };
 
-export type ChildQuantityDto = {
-    unit_id: number;
-    unit_description: string;
-    material: StandardMaterialDto;
-    requisition_quantity: number;
-    stock_quantity: number;
+export type Standard = {
+    totalStandardQuantity: number;
+    childrenStockQuantity: number;
+    childrenRequisitionQuantity: number;
+    childrenStandards: ChildStandard[];
 };
 
-export type StandardMaterialDataDto = {
-    material: StandardMaterialDto;
-    material_ids: string[];
-    tool_material_ids: string[];
-    standard_quantity: number;
-    children_requisition_quantity: number;
-    children_stock_quantity: number;
-    standard_children_quantities: StandardChildQuantityDto[];
-    children_quantities: ChildQuantityDto[];
+export type Stanadard = Standard;
+
+export type MaterialsGroups = {
+    materialGroup: MaterialDto;
+    materialIds: string[];
+    toolMaterialIds: string[];
+    standards: Standard[];
 };
 
-export type StandardDrawerDataDto = {
-    managing_unit: StandardManagingUnitDto;
-    material_category: StandardMaterialCategoryDto;
-    priority: number;
-    materials: StandardMaterialDataDto[];
+export type StandardMaterialCategories = {
+    materialCategory: StandardMaterialCategory;
+    managingUnit: UnitDto;
+    materialsGroups: MaterialsGroups[];
 };
 
-// ─── Internal calculation types ───────────────────────────────────────────────
+export type StandardResponse = {
+    materialCategories: StandardMaterialCategories[];
+};
+
 
 export type RelevantStandard = {
     standardId: number;
@@ -96,10 +79,10 @@ export type CalculatedUnitStandard = {
     itemGroupId: string;
     toolGroupId: string | null;
     toolGroupName: string | null;
-    standardQuan: number;
-    stockQuan: number;
-    toolQuan: number | null;
+    standardQuantity: number;
+    stockQuantity: number;
+    toolQuantity: number | null;
     note: string | null;
     lowestLevel: number;
-    origins: StandardOriginDto[];
+    origins: StandardOrigin[];
 };
