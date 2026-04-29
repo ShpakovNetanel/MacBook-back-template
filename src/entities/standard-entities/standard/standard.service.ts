@@ -93,7 +93,6 @@ export class StandardService {
         const groupToMaterialMap = await this.standardRepository.getAllGroupToMaterialMappings();
         const allMaterials = await this.standardRepository.getAllMaterials();
         const allGroupNames = await this.standardRepository.getAllGroupNames();
-
         const calculatedStandards: CalculatedUnitStandard[] = [];
         for (const childUnitId of eligibleDirectChildUnitIds) {
             const childTagsByLevel = unitTagsByUnit.get(childUnitId) ?? new Map();

@@ -1,7 +1,6 @@
 import { MATERIAL_TYPES, REPORT_TYPES, UNIT_STATUSES } from "src/constants";
 import { MaterialDto, UnitDto, UnitStatusDto } from "src/entities/report-entities/report/report.types";
 import { Report } from "src/entities/report-entities/report/report.model";
-import { CategoryDesc } from "../../../../../backend/src/entities/standard-entities/category-desc/category-desc.model";
 import {
     CalculatedUnitStandard,
     ChildStandard,
@@ -11,6 +10,7 @@ import {
     StandardOrigin,
     StandardResponse,
 } from "../standard.types";
+import { CategoryDesc } from "../../category-desc/category-desc.model";
 
 export type LiveMaterialData = {
     stockQuantity: number;

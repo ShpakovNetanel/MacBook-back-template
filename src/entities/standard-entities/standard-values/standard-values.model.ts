@@ -1,5 +1,6 @@
 import { BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { StandardTag } from "../standard-tag/standard-tag.model";
+import { StandardAttribute } from "../standard-attribute/standard-attribute.model";
 
 export type IStandardValues = {
     standardId: number;
@@ -11,6 +12,7 @@ export type IStandardValues = {
 @Table({ tableName: "standard_values", timestamps: false })
 export class StandardValues extends Model<IStandardValues> {
     @PrimaryKey
+    @ForeignKey(() => StandardAttribute)
     @Column({ field: 'standard_id', type: DataType.INTEGER })
     declare standardId: number;
 

@@ -14,6 +14,7 @@ import { UnitHierarchyModule } from './entities/unit-entities/features/unit-hier
 import { UnitStatusModule } from './entities/unit-entities/units-statuses/units-statuses.module';
 import { UnitUserModule } from './entities/unit-entities/users/user.module';
 import { ServerTimeModule } from './server-time/server-time.module';
+import { StandardModule } from './entities/standard-entities/standard/standard.module';
 
 export default [
   MaterialModule,
@@ -32,4 +33,5 @@ export default [
   ServerTimeModule,
   StocksModule,
   MaterialStandardGroupModule,
+  StandardModule
 ];

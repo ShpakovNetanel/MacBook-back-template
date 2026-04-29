@@ -5,14 +5,14 @@ import { Material } from "src/entities/material-entities/material/material.model
 import { Unit } from "src/entities/unit-entities/unit/unit.model";
 import { UnitStatus } from "src/entities/unit-entities/units-statuses/units-statuses.model";
 import { RelevantStandard, RelevantStandardValue } from "./standard.types";
-import { CategoryDesc } from "../../../../backend/src/entities/standard-entities/category-desc/category-desc.model";
-import { CategoryGroup } from "../../../../backend/src/entities/standard-entities/category-group/category-group.model";
-import { UnitStandardTags } from "../../../../backend/src/entities/standard-entities/unit-standard-tag/unit-standard-tag.model";
-import { MaterialStandardGroup } from "../../../../backend/src/entities/standard-entities/material-standard-group/material-standard-group.model";
-import { StandardGroup } from "../../../../backend/src/entities/standard-entities/standard-group/standard-group.model";
 import { StandardAttribute } from "../standard-attribute/standard-attribute.model";
-import { StandardTag } from "../../../../backend/src/entities/standard-entities/standard-tag/standard-tag.model";
-import { StandardValues } from "../../../../backend/src/entities/standard-entities/standard-values/standard-values.model";
+import { UnitStandardTags } from "../unit-standard-tag/unit-standard-tag.model";
+import { MaterialStandardGroup } from "../material-standard-group/material-standard-group.model";
+import { CategoryDesc } from "../category-desc/category-desc.model";
+import { CategoryGroup } from "../category-group/category-group.model";
+import { StandardGroup } from "../standard-group/standard-group.model";
+import { StandardTag } from "../standard-tag/standard-tag.model";
+import { StandardValues } from "../standard-values/standard-values.model";
 
 @Injectable()
 export class StandardRepository {

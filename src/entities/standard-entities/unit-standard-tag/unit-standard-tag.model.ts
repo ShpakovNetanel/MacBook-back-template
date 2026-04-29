@@ -21,4 +21,7 @@ export class UnitStandardTags extends Model<IUnitStandardTags> {
 
     @BelongsTo(() => UnitId)
     declare Unit: UnitId;
+
+    @BelongsTo(() => StandardTag)
+    declare tag: StandardTag;
 }

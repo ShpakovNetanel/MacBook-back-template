@@ -1,7 +1,7 @@
 import { BelongsTo, Column, DataType, ForeignKey, HasMany, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { UnitId } from "src/entities/unit-entities/unit-id/unit-id.model";
-import { StandardGroup } from "../../../../backend/src/entities/standard-entities/standard-group/standard-group.model";
-import { StandardValues } from "../../../../backend/src/entities/standard-entities/standard-values/standard-values.model";
+import { StandardGroup } from "../standard-group/standard-group.model";
+import { StandardValues } from "../standard-values/standard-values.model";
 
 export type IStandardAttribute = {
     id: number;

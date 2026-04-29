@@ -142,7 +142,6 @@ export class ReportRepository {
                     startDate: { [Op.lte]: date },
                     endDate: { [Op.gt]: date }
                 },
-                logging: console.log
             });
             const next: number[] = [];
 

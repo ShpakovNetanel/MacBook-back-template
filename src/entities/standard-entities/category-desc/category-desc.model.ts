@@ -1,4 +1,5 @@
-import { Column, DataType, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { BelongsTo, Column, DataType, HasMany, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { CategoryGroup } from "../category-group/category-group.model";
 
 type ICategoryDesc = {
     id: string;
@@ -21,4 +22,7 @@ export class CategoryDesc extends Model<ICategoryDesc> {
 
     @Column({ type: DataType.BOOLEAN, field: 'is_against_tool' })
     declare isAgainstTool: boolean;
+
+    @HasMany(() => CategoryGroup)
+    declare categoryGroups: CategoryGroup[];
 }
