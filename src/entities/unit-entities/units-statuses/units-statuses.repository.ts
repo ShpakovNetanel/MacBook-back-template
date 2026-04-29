@@ -30,7 +30,7 @@ export class UnitStatusRepository {
                     unitObjectType: OBJECT_TYPES.UNIT,
                     relatedUnitObjectType: OBJECT_TYPES.UNIT,
                     unitId: { [Op.in]: frontier },
-                    startDate: { [Op.lt]: now },
+                    startDate: { [Op.lte]: now },
                     endDate: { [Op.gte]: now }
                 },
                 transaction,

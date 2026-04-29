@@ -16,7 +16,7 @@ import { UnitRelation } from '../../unit-relations/unit-relation.model';
 import { RemoveUnitRelationDto } from './DTO/remove-unit-relation.dto';
 import { AddUnitRelationDto } from './DTO/add-unit-relation.dto';
 import { TransferUnitRelationDto } from './DTO/update-unit-relation.dto';
-import { MESSAGE_TYPES, UNIT_STATUSES } from '../../../../constants';
+import { MATKAL_UNIT_ID, MESSAGE_TYPES, UNIT_STATUSES } from '../../../../constants';
 import { Unit } from '../../unit/unit.model';
 import { UnitStatus } from '../../units-statuses/units-statuses.model';
 import { UnitStatusRepository } from '../../units-statuses/units-statuses.repository';
@@ -52,7 +52,7 @@ export class UnitHierarchyService {
     private readonly unitStatusTypesRepository: UnitStatusRepository,
     private readonly reportRoutingRepository: ReportRoutingRepository,
     private readonly unitUserRepository: UserRepository,
-  ) {}
+  ) { }
 
   async getHierarchyForUser(
     username: string,
@@ -105,9 +105,9 @@ export class UnitHierarchyService {
         status: node.status ?? DEFAULT_STATUS,
         parent: node.parent
           ? {
-              ...node.parent,
-              status: node.parent.status ?? DEFAULT_STATUS,
-            }
+            ...node.parent,
+            status: node.parent.status ?? DEFAULT_STATUS,
+          }
           : null,
       }));
 
@@ -199,14 +199,14 @@ export class UnitHierarchyService {
 
       const parent = parentId
         ? {
-            id: parentId,
-            description: detailByUnit.get(parentId)?.description ?? '',
-            level: detailByUnit.get(parentId)?.unitLevelId ?? 0,
-            simul: detailByUnit.get(parentId)?.tsavIrgunCodeId ?? '',
-            status:
-              statusByUnit.get(parentId)?.unitStatus?.dataValues ??
-              DEFAULT_STATUS,
-          }
+          id: parentId,
+          description: detailByUnit.get(parentId)?.description ?? '',
+          level: detailByUnit.get(parentId)?.unitLevelId ?? 0,
+          simul: detailByUnit.get(parentId)?.tsavIrgunCodeId ?? '',
+          status:
+            statusByUnit.get(parentId)?.unitStatus?.dataValues ??
+            DEFAULT_STATUS,
+        }
         : null;
 
       return {
@@ -515,7 +515,14 @@ export class UnitHierarchyService {
           ),
         ]);
 
-      if (!isLowerUnderRootUnit) {
+      const isLowerUnitUnderMatkal = await this.repository.isUnitUnderRootUnit(
+        formattedDate,
+        MATKAL_UNIT_ID,
+        lowerUnit,
+        transaction,
+      )
+
+      if (!isLowerUnderRootUnit && isLowerUnitUnderMatkal) {
         throw new BadRequestException({
           message: NOT_UNDER_ROOT_UNIT_ERROR,
           type: MESSAGE_TYPES.FAILURE,
