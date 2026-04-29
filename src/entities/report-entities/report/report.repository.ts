@@ -142,6 +142,7 @@ export class ReportRepository {
                     startDate: { [Op.lte]: date },
                     endDate: { [Op.gt]: date }
                 },
+                logging: console.log
             });
             const next: number[] = [];
 
@@ -302,6 +303,7 @@ export class ReportRepository {
         material: string | undefined = ''
     ): Promise<Report[]> {
         const { unitIds } = await this.buildReportScope(date, recipientUnitId);
+
         return this.fetchReportsByScope({
             date,
             reportingUnitIds: unitIds,

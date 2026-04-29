@@ -1,8 +1,8 @@
-name: Deploy Backend
+name: Build & Deploy Backend to VPS
 
 on:
   push:
-    branches: [main, qa]
+    branches: [ "main", "qa" ]
 
 env:
   REGISTRY: ghcr.io
@@ -14,17 +14,20 @@ jobs:
     permissions:
       contents: read
       packages: write
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Docker Login
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.CR_PAT }}
 
-      - name: Build & Push Backend
+      # --- בנייה ודחיפה ---
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -35,7 +38,7 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - name: Deploy to VPS
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -45,9 +48,23 @@ jobs:
             echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             if [ "${{ github.ref_name }}" == "main" ]; then
-              cd /opt/app/daba-system && docker compose pull backend && docker compose up -d backend
+              echo "Deploying Main Environment..."
+              cd /opt/app/daba-system
+              docker compose pull
+              docker compose up -d
+            
             elif [ "${{ github.ref_name }}" == "qa" ]; then
-              cd /opt/app/daba-qa && docker compose pull backend && docker compose up -d backend
-              cd /opt/app/daba-auto && docker compose pull backend && docker compose up -d backend
+              echo "Deploying QA Environment..."
+              cd /opt/app/daba-qa
+              docker compose pull
+              docker compose up -d
+              
+              echo "Deploying AUTO Environment..."
+              cd /opt/app/daba-auto
+              # סביבת Auto משתמשת באימג' של ה-QA בבקאנד, 
+              # אז הפול כאן יעדכן אותה אוטומטית לקוד החדש!
+              docker compose pull
+              docker compose up -d
             fi
+            
             docker image prune -af
