@@ -152,7 +152,6 @@ export const calculateStandardsForUnit = (
             const unitLiveData = liveDataByUnit.get(unitId) ?? new Map<string, LiveMaterialData>();
             const stockQuantity = sumMaterialGroupQuantity(unitLiveData, standard.itemGroupId, groupToMaterialMap, "stockQuantity");
             const baseStandardQuantity = standard.values
-                .filter(standardValue => standardValue.tagLevel === lowestLevel)
                 .reduce((total, standardValue) => total + parseQuantityValue(standardValue.quantity), 0);
 
             let toolQuantity: number | null = null;
