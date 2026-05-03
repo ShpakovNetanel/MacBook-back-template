@@ -40,7 +40,7 @@ export class ScreenUnitRequestingGuard implements CanActivate {
 
     const statusId = screenUnitStatus?.unitStatusId ?? UNIT_STATUSES.REQUESTING;
 
-    if (statusId !== UNIT_STATUSES.REQUESTING) {
+    if (statusId === UNIT_STATUSES.WAITING_FOR_ALLOCATION) {
       throw new BadRequestException({
         message: SCREEN_UNIT_LOCKED_ERROR,
         type: MESSAGE_TYPES.FAILURE,
