@@ -6,15 +6,15 @@ export class UpdateUnitStatus {
     @IsInt({ each: true })
     @Type(() => Number)
     @Min(1, { each: true })
-    unitsIds: number[];
+    declare unitsIds: number[];
 
     @IsInt()
-    statusId: number;
+    declare statusId: number;
 
     @IsBoolean()
-    updateHierarchy: boolean;
+    declare updateHierarchy: boolean;
 
     @IsOptional()
     @IsBoolean()
-    clearHierarchyStatuses?: boolean;
+    declare clearHierarchyStatuses?: boolean;
 }
