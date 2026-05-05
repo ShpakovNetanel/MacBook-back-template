@@ -42,7 +42,7 @@ const splitMessageAndData = (
   if (typeof type !== "string") return null;
   const keys = Object.keys(asRecord);
   const validKeys = keys.every((key) => ["data", "message", "type"].includes(key));
-  if (!validKeys) return null;
+  if (!validKeys) return null;  
   return { data: asRecord.data ?? [], message, type };
 };
 

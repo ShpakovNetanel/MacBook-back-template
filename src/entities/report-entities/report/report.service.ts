@@ -199,6 +199,8 @@ export class ReportService {
             );
 
             if (isEmptyish(data)) {
+                console.log("AS");
+                
                 throw new BadGatewayException({
                     message: 'לא נמצאו מק״טים מועדפים',
                     type: MESSAGE_TYPES.WARNING
@@ -215,7 +217,7 @@ export class ReportService {
 
             throw new BadGatewayException({
                 message: error?.response?.message ?? 'הבאת מק״טים מועדפים נכשלה, יש לנסות שנית',
-                type: MESSAGE_TYPES.FAILURE
+                type: error?.response?.type
             })
         }
     }
