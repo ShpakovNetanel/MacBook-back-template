@@ -138,12 +138,12 @@ export class ReportService {
         }
     }
 
-    async fetchReports(date: string, recipientUnitId: number): Promise<ReportDto[]> {
-        const baseReports = await this.repository.fetchReportsData(date, recipientUnitId);
+    async fetchReports(date: string, screenUnitId: number): Promise<ReportDto[]> {
+        const baseReports = await this.repository.fetchReportsData(date, screenUnitId);
 
         const [allocationReports, screenAllocationReports] = await Promise.all([
-            this.repository.fetchAllocationReportsData(date, recipientUnitId),
-            this.repository.fetchIncomingAllocationReports(date, recipientUnitId),
+            this.repository.fetchAllocationReportsData(date, screenUnitId),
+            this.repository.fetchIncomingAllocationReports(date, screenUnitId),
         ]);
 
         const reports = [...baseReports, ...allocationReports, ...screenAllocationReports];
@@ -156,13 +156,13 @@ export class ReportService {
             ? []
             : await this.repository.fetchLatestHierarchyReportsByType(
                 date,
-                recipientUnitId,
+                screenUnitId,
                 REPORT_TYPES.INVENTORY,
                 materialIds
             );
 
         return buildReportsResponse({
-            recipientUnitId,
+            screenUnitId,
             reports,
             yesterdayInventoryReports: latestInventoryReports,
             screenAllocationReports,
@@ -222,9 +222,9 @@ export class ReportService {
         }
     }
 
-    async fetchMostRecentMaterials(date: string, recipientUnitId: number) {
+    async fetchMostRecentMaterials(date: string, screenUnitId: number) {
         try {
-            const reports = await this.repository.fetchMostRecentReportsData(date, recipientUnitId);
+            const reports = await this.repository.fetchMostRecentReportsData(date, screenUnitId);
 
             if (isEmptyish(reports)) {
                 throw new BadGatewayException({
@@ -238,14 +238,14 @@ export class ReportService {
                 ? []
                 : await this.repository.fetchLatestHierarchyReportsByType(
                     date,
-                    recipientUnitId,
+                    screenUnitId,
                     REPORT_TYPES.INVENTORY,
                     materialIds
                 );
 
             return {
                 data: buildReportsMaterialsResponse({
-                    recipientUnitId,
+                    screenUnitId,
                     reports,
                     yesterdayInventoryReports: latestInventoryReports,
                     fetchQuantity: false

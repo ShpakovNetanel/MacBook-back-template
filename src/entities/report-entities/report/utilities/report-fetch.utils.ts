@@ -17,7 +17,7 @@ import { UnitRelation } from "../../../unit-entities/unit-relations/unit-relatio
 import { isDefined } from "remeda";
 
 type FetchReportsParams = {
-    recipientUnitId: number;
+    screenUnitId: number;
     reports: Report[] | null | undefined;
     yesterdayInventoryReports?: Report[] | null | undefined;
     screenAllocationReports?: Report[] | null | undefined;
@@ -127,7 +127,7 @@ const buildYesterdayInventoryQuantityByUnitMaterial = (
 };
 
 export const buildReportsResponse = ({
-    recipientUnitId,
+    screenUnitId,
     reports,
     yesterdayInventoryReports,
     screenAllocationReports,
@@ -166,14 +166,14 @@ export const buildReportsResponse = ({
 
     for (const report of reports ?? []) {
         const isAllocationReport = report.reportTypeId === REPORT_TYPES.ALLOCATION;
-        const isScreenUnitReport = !isAllocationReport && report.unitId === recipientUnitId;
+        const isScreenUnitReport = !isAllocationReport && report.unitId === screenUnitId;
         const unitDetail = report.unit?.details?.[0];
         const recipientDetail = report.recipientUnit?.details?.[0];
         const unitStatus = report.unit?.unitStatus?.[0]?.unitStatus;
         const recipientStatus = report.recipientUnit?.unitStatus?.[0]?.unitStatus;
 
         const recipientUnit = buildUnitDto(
-            report.recipientUnitId ?? recipientUnitId,
+            report.recipientUnitId ?? screenUnitId,
             recipientDetail,
             null,
             recipientStatus
@@ -187,7 +187,7 @@ export const buildReportsResponse = ({
         );
 
         const allocationRecipientUnit = buildUnitDto(
-            report.recipientUnitId ?? recipientUnitId,
+            report.recipientUnitId ?? screenUnitId,
             recipientDetail,
             toParentUnitDto(reportingUnit),
             recipientStatus
@@ -201,7 +201,7 @@ export const buildReportsResponse = ({
                 materialById.set(item.materialId, buildMaterialDto(item.materialId, item.material, item.standardGroup));
             }
 
-            const screenUnitComment = item.material?.comments?.find(comment => comment.unitId === recipientUnitId)?.text ?? '';
+            const screenUnitComment = item.material?.comments?.find(comment => comment.unitId === screenUnitId)?.text ?? '';
 
             if (screenUnitComment) {
                 let commentsByType = reportCommentsByMaterial.get(item.materialId);
@@ -215,18 +215,19 @@ export const buildReportsResponse = ({
                 }
             }
 
-            const childUnitComment = resolveCommentByAuthor(
-                item.material?.comments,
-                report.unitId,
-                report.recipientUnitId ?? recipientUnitId
-            );
+            const childUnitComment = report.recipientUnitId === screenUnitId
+                ? resolveCommentByAuthor(
+                    item.material?.comments,
+                    report.unitId,
+                    report.recipientUnitId
+                ) : "";
 
-            const key = `${isAllocationReport ? report.recipientUnitId ?? recipientUnitId : report.unitId}:${item.materialId}:${report.reportTypeId}:${report.recipientUnitId ?? 0}`;
+            const key = `${isAllocationReport ? report.recipientUnitId ?? screenUnitId : report.unitId}:${item.materialId}:${report.reportTypeId}:${report.recipientUnitId ?? 0}`;
 
             if (isAllocationReport || (!isScreenUnitReport && (toNumber(item.confirmedQuantity) !== 0 || report.reportTypeId !== REPORT_TYPES.REQUEST))) {
                 itemByKey.set(key, {
                     materialId: item.materialId,
-                    unitId: isAllocationReport ? report.recipientUnitId ?? recipientUnitId : report.unitId,
+                    unitId: isAllocationReport ? report.recipientUnitId ?? screenUnitId : report.unitId,
                     unit: isAllocationReport ? allocationRecipientUnit : reportingUnit,
                     allocatedQuantity: isAllocationReport ? toNumber(item.confirmedQuantity) : null,
                     type: {
@@ -249,7 +250,7 @@ export const buildReportsResponse = ({
     }
 
     for (const report of yesterdayInventoryReports ?? []) {
-        if (report.unitId === recipientUnitId) continue;
+        if (report.unitId === screenUnitId) continue;
 
         const unitDetail = report.unit?.details?.[0];
         const recipientDetail = report.recipientUnit?.details?.[0];
@@ -257,7 +258,7 @@ export const buildReportsResponse = ({
         const recipientStatus = report.recipientUnit?.unitStatus?.[0]?.unitStatus;
 
         const recipientUnit = buildUnitDto(
-            report.recipientUnitId ?? recipientUnitId,
+            report.recipientUnitId ?? screenUnitId,
             recipientDetail,
             null,
             recipientStatus
