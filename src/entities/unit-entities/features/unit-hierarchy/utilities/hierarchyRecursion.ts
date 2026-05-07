@@ -4,7 +4,7 @@ import { UNIT_LEVELS } from "../../../../../constants";
 
 const DEFAULT_STATUS = { id: 0, description: "בדיווח" };
 
-const getStatusFromUnit = (
+export const getStatusFromUnit = (
     unit?: {
         unitStatus?: Array<{
             unitStatus?: { id: number; description: string; dataValues?: UnitStatus };

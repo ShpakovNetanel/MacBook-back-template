@@ -11,6 +11,7 @@ import {
   getEmergencyUnitIds,
   getHierarchy,
   getRootUnit,
+  getStatusFromUnit,
 } from './utilities/hierarchyRecursion';
 import { UnitRelation } from '../../unit-relations/unit-relation.model';
 import { RemoveUnitRelationDto } from './DTO/remove-unit-relation.dto';
@@ -682,6 +683,7 @@ export class UnitHierarchyService {
         level: childDetail?.unitLevelId ?? 0,
         simul: childDetail?.tsavIrgunCodeId ?? '',
         isEmergencyUnit: emergencyUnitIds.has(childId),
+        status: getStatusFromUnit(childRelation?.relatedUnit),
         children: hierarchy.map((childRelatedUnit) => {
           const { parent, ...children } = childRelatedUnit;
           return {
