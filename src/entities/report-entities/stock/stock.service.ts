@@ -31,8 +31,7 @@ export class StockService {
 
     const visibleChildren = rootUnitChildrenHierarchy.filter(
       (child) =>
-        child.isEmergencyUnit &&
-        child.status?.id !== UNIT_STATUSES.REQUESTING,
+        child.isEmergencyUnit && child.status?.id !== UNIT_STATUSES.REQUESTING,
     );
 
     const allRelatedUnitIds = visibleChildren.flatMap((rootUnitChild) =>
