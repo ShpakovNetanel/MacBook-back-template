@@ -71,6 +71,22 @@ const getStandardGroupCategory = (standardGroup?: StandardGroup) =>
     ?? standardGroup?.groupType
     ?? "";
 
+const getToolCategory = (material?: Material) =>
+    material?.standardGroupMaterials
+        ?.find((standardGroupMaterial) => standardGroupMaterial.standardGroup?.categoryGroup?.categoryDesc?.description)
+        ?.standardGroup?.categoryGroup?.categoryDesc?.description;
+
+const getMaterialCategory = (material?: Material, standardGroup?: StandardGroup) => {
+    if (material?.type === MATERIAL_TYPES.TOOL) {
+        return getToolCategory(material)
+            ?? material.materialCategory?.mainCategory?.description
+            ?? getStandardGroupCategory(standardGroup);
+    }
+
+    return material?.materialCategory?.mainCategory?.description
+        ?? getStandardGroupCategory(standardGroup);
+};
+
 const buildMaterialDto = (
     materialId: string,
     material?: Material,
@@ -80,10 +96,10 @@ const buildMaterialDto = (
     description: material?.description ?? standardGroup?.name ?? "",
     multiply: toNumber(material?.multiply),
     nickname: material?.nickname?.nickname ?? standardGroup?.nickname?.nickname ?? "",
-    category: material?.materialCategory?.mainCategory?.description ?? getStandardGroupCategory(standardGroup),
+    category: getMaterialCategory(material, standardGroup),
     unitOfMeasure: material?.unitOfMeasurement ?? "יח",
     type: isDefined(material)
-        ? MATERIAL_TYPES.ITEM
+        ? material.type
         : isDefined(standardGroup)
             ? standardGroup.groupType
             : MATERIAL_TYPES.ITEM,

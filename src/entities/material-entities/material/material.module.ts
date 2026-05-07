@@ -14,6 +14,7 @@ import { ReportItem } from "../../report-entities/report-item/report-item.model"
 import { Stock } from "../../report-entities/stock/stock.model";
 import { CategoryDesc } from "../../standard-entities/category-desc/category-desc.model";
 import { CategoryGroup } from "../../standard-entities/category-group/category-group.model";
+import { MaterialStandardGroup } from "../../standard-entities/material-standard-group/material-standard-group.model";
 import { StandardGroup } from "../../standard-entities/standard-group/standard-group.model";
 import { UnitId } from "../../unit-entities/unit-id/unit-id.model";
 import { Unit } from "../../unit-entities/unit/unit.model";
@@ -26,6 +27,7 @@ import { Unit } from "../../unit-entities/unit/unit.model";
             Material,
             MaterialCategory,
             MaterialNickname,
+            MaterialStandardGroup,
             Report,
             ReportItem,
             SecondCategory,

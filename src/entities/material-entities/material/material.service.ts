@@ -1,18 +1,22 @@
 import { Injectable } from "@nestjs/common";
+import { isEmptyish } from "remeda";
+import { ReportCommentDto } from "src/entities/report-entities/report/report.types";
+import { MATERIAL_TYPES } from "../../../constants";
+import { Material } from "./material.model";
 import { MaterialRepository } from "./material.repository";
 import { PastedMaterialsDto } from "./material.types";
-import { isEmptyish } from "remeda";
-import { MATERIAL_TYPES } from "../../../constants";
-import { StandardGroup } from "../../standard-entities/standard-group/standard-group.model";
-import { ReportCommentDto } from "src/entities/report-entities/report/report.types";
 
-const getStandardGroupCategory = (group: StandardGroup) =>
-    group.categoryGroup?.categoryDesc?.description
-    ?? (group.groupType === MATERIAL_TYPES.ITEM
-        ? 'קבוצת מק״טים'
-        : group.groupType === MATERIAL_TYPES.TOOL
-            ? 'קבוצת כלים'
-            : '');
+const getMaterialCategory = (material: Material, fallbackToCategoryId = false) => {
+    const type = material.dataValues.type;
+
+    if (type === MATERIAL_TYPES.TOOL) {
+        return material.standardGroupMaterials
+            ?.find((standardGroupMaterial) => standardGroupMaterial.standardGroup?.categoryGroup?.categoryDesc?.description)
+            ?.standardGroup?.categoryGroup?.categoryDesc?.description ?? "";
+    }
+
+    return material.materialCategory?.mainCategory?.dataValues?.description ?? '';
+};
 
 @Injectable()
 export class MaterialService {
@@ -21,14 +25,14 @@ export class MaterialService {
     async fetchExcelMaterials() {
         const materials = await this.repository.fetchExcelMaterials();
 
-        return materials.map(({ dataValues: material, nickname, materialCategory }) => ({
-            id: material.id,
-            description: material.description,
-            unitOfMeasure: material.unitOfMeasurement,
-            multiply: material.multiply,
-            nickname: nickname?.dataValues.nickname,
-            category: materialCategory?.dataValues.mainCategoryId,
-            type: MATERIAL_TYPES.ITEM
+        return materials.map((material) => ({
+            id: material.dataValues.id,
+            description: material.dataValues.description,
+            unitOfMeasure: material.dataValues.unitOfMeasurement,
+            multiply: material.dataValues.multiply,
+            nickname: material.nickname?.dataValues.nickname,
+            category: getMaterialCategory(material, true),
+            type: material.dataValues.type
         }))
     }
 
@@ -52,20 +56,21 @@ export class MaterialService {
             ...material.dataValues,
             unitOfMeasure: material.dataValues.unitOfMeasurement,
             multiply: Number(material.dataValues.multiply),
-            category: material.materialCategory?.mainCategory?.dataValues.description,
+            category: getMaterialCategory(material),
             nickname: material.nickname?.nickname ?? "",
-            type: MATERIAL_TYPES.ITEM,
+            type: material.dataValues.type,
             favorite: !isEmptyish(material.unitFavorites ?? []),
             comments: Array.from(reportCommentsByMaterial.get(material.id)?.entries() ?? [])
                 .map(([type, comment]): ReportCommentDto => ({ type, comment }))
                 .sort((a, b) => a.type - b.type)
         }));
+
         const standardGroupResults: Array<Record<string, any>> = standardGroups.map((group) => ({
             id: group.id,
             description: group.name,
             favorite: favoriteIds.has(group.id),
             type: group.groupType,
-            category: getStandardGroupCategory(group),
+            category: group.categoryGroup?.categoryDesc?.description ?? '',
             nickname: group.nickname?.nickname ?? "",
             unitOfMeasure: 'יח',
             multiply: 0,
@@ -95,9 +100,9 @@ export class MaterialService {
             ...material.dataValues,
             unitOfMeasure: material.dataValues.unitOfMeasurement,
             multiply: Number(material.dataValues.multiply),
-            category: material.materialCategory?.mainCategory?.dataValues.description,
+            category: getMaterialCategory(material),
             nickname: material.nickname?.nickname ?? "",
-            type: MATERIAL_TYPES.ITEM,
+            type: material.dataValues.type,
             favorite: !isEmptyish(material.unitFavorites ?? []),
         }));
         const standardGroupResults: Array<Record<string, any>> = standardGroups.map((group) => ({
@@ -105,7 +110,7 @@ export class MaterialService {
             description: group.name,
             favorite: favoriteIds.has(group.id),
             type: group.groupType,
-            category: getStandardGroupCategory(group),
+            category: group.categoryGroup?.categoryDesc?.description ?? '',
             nickname: group.nickname?.nickname ?? "",
             unitOfMeasure: null,
             multiply: 0,

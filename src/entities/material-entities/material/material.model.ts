@@ -8,6 +8,7 @@ import { Stock } from "../../report-entities/stock/stock.model";
 import { MaterialCategory } from "../material-category/material-category.model";
 import { MaterialNickname } from "../material-nickname/material-nickname.model";
 import { UnitFavoriteMaterial } from "../unit-favorite-material/unit-favorite-material.model";
+import { MaterialStandardGroup } from "../../standard-entities/material-standard-group/material-standard-group.model";
 
 export type IMaterial = {
   id: string;
@@ -61,6 +62,9 @@ export class Material extends Model<IMaterial> {
 
   @HasOne(() => MaterialNickname)
   declare nickname?: MaterialNickname;
+
+  @HasMany(() => MaterialStandardGroup, { foreignKey: "materialId", sourceKey: "id", constraints: false, as: "standardGroupMaterials" })
+  declare standardGroupMaterials?: MaterialStandardGroup[];
 
   @HasMany(() => ReportItem)
   declare reportItems?: ReportItem[];

@@ -23,6 +23,6 @@ export class CategoryDesc extends Model<ICategoryDesc> {
     @Column({ type: DataType.BOOLEAN, field: 'is_against_tool' })
     declare isAgainstTool: boolean;
 
-    @HasMany(() => CategoryGroup)
+    @HasMany(() => CategoryGroup, { foreignKey: "id", sourceKey: "id", constraints: false, as: "categoryGroups" })
     declare categoryGroups: CategoryGroup[];
 }

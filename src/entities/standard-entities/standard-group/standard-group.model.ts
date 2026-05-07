@@ -1,5 +1,5 @@
 import { DataTypes } from "sequelize";
-import { BelongsTo, Column, HasOne, Model, PrimaryKey, Table } from "sequelize-typescript";
+import { Column, HasOne, Model, PrimaryKey, Table } from "sequelize-typescript";
 import { MaterialNickname } from "../../material-entities/material-nickname/material-nickname.model";
 import { CategoryGroup } from "../category-group/category-group.model";
 
@@ -24,6 +24,6 @@ export class StandardGroup extends Model<IStandardGroup> {
     @HasOne(() => MaterialNickname, { foreignKey: "materialId", sourceKey: "id", constraints: false, as: "nickname" })
     declare nickname?: MaterialNickname;
 
-    @BelongsTo(() => CategoryGroup, { foreignKey: "id", targetKey: "groupId", constraints: false, as: "categoryGroup" })
+    @HasOne(() => CategoryGroup, { foreignKey: "groupId", sourceKey: "id", constraints: false, as: "categoryGroup" })
     declare categoryGroup?: CategoryGroup;
 }

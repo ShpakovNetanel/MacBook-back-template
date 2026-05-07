@@ -23,6 +23,7 @@ type MaterialImportRow = {
     description: string;
     multiply: number;
     recordStatus: string;
+    type: string;
     unitOfMeasurement?: string;
     nickname?: {
         nickname?: string;
@@ -32,6 +33,15 @@ type MaterialImportRow = {
             description?: string;
         };
     };
+    standardGroupMaterials?: Array<{
+        standardGroup?: {
+            categoryGroup?: {
+                categoryDesc?: {
+                    description?: string;
+                };
+            };
+        };
+    }>;
 };
 
 type HierarchyUnitSnapshot = {
@@ -64,6 +74,7 @@ const SCREEN_UNIT_NOT_FOUND_MESSAGE = "יחידת המסך לא קיימת במ�
 const UNSUPPORTED_REPORT_TYPE_MESSAGE = "סוג הדיווח אינו נתמך בייבוא האקסל";
 const MATERIAL_NOT_FOUND_MESSAGE = "המק\"ט לא קיים במערכת";
 const MATERIAL_INACTIVE_MESSAGE = "המק\"ט אינו פעיל";
+const TOOL_MATERIAL_INVENTORY_ONLY_MESSAGE = "מק\"ט כלי ניתן לייבוא רק במלאי";
 const QUANTITY_MUST_BE_POSITIVE_MESSAGE = "הכמות חייבת להיות גדולה מ-0";
 const UNIT_NOT_FOUND_MESSAGE = "היחידה לא קיימת במערכת";
 const SCREEN_ROWS_OUTSIDE_SCREEN_UNIT_MESSAGE = "נתוני המסך מכילים יחידות שאינן תחת יחידת המסך";
@@ -229,6 +240,7 @@ export class ExcelService {
                 description: material.description,
                 multiply: Number(material.multiply),
                 recordStatus: material.recordStatus,
+                type: material.type,
                 unitOfMeasurement: material.unitOfMeasurement,
                 nickname: material.nickname,
                 materialCategory: material.materialCategory,
@@ -394,6 +406,8 @@ export class ExcelService {
                 errorMessage = MATERIAL_NOT_FOUND_MESSAGE;
             } else if (material.recordStatus !== RECORD_STATUS.ACTIVE) {
                 errorMessage = MATERIAL_INACTIVE_MESSAGE;
+            } else if (material.type === MATERIAL_TYPES.TOOL && row.reportType !== REPORT_TYPES.INVENTORY) {
+                errorMessage = TOOL_MATERIAL_INVENTORY_ONLY_MESSAGE;
             } else if (row.quantity < 0) {
                 errorMessage = QUANTITY_MUST_BE_POSITIVE_MESSAGE;
             } else if (!unit) {
@@ -616,10 +630,22 @@ export class ExcelService {
             description: material?.description ?? "",
             multiply: Number(material?.multiply ?? 0),
             nickname: material?.nickname?.nickname ?? "",
-            category: material?.materialCategory?.mainCategory?.description ?? "",
+            category: this.getMaterialCategory(material),
             unitOfMeasure: material?.unitOfMeasurement ?? "",
-            type: MATERIAL_TYPES.ITEM,
+            type: material?.type ?? MATERIAL_TYPES.ITEM,
         };
+    }
+
+    private getMaterialCategory(material?: MaterialImportRow) {
+        if (!material) return "";
+
+        if (material.type === MATERIAL_TYPES.TOOL) {
+            return material.standardGroupMaterials
+                ?.find((standardGroupMaterial) => standardGroupMaterial.standardGroup?.categoryGroup?.categoryDesc?.description)
+                ?.standardGroup?.categoryGroup?.categoryDesc?.description ?? "";
+        }
+
+        return material.materialCategory?.mainCategory?.description ?? "";
     }
 
     private buildUnitDto(unitId: number, importScope: ImportScope): UnitDto {

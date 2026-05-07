@@ -9,6 +9,40 @@ import { MaterialNickname } from "../material-nickname/material-nickname.model";
 import { UnitFavoriteMaterial } from "../unit-favorite-material/unit-favorite-material.model";
 import { Comment } from "../../report-entities/comment/comment.model";
 import { StandardGroup } from "../../standard-entities/standard-group/standard-group.model";
+import { MaterialStandardGroup } from "../../standard-entities/material-standard-group/material-standard-group.model";
+import { CategoryDesc } from "src/entities/standard-entities/category-desc/category-desc.model";
+import { CategoryGroup } from "src/entities/standard-entities/category-group/category-group.model";
+
+const getMaterialTypesForTab = (tab?: number) => Number(tab) === REPORT_TYPES.INVENTORY
+    ? [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
+    : [MATERIAL_TYPES.ITEM];
+
+const getCenterIdsForTab = (tab?: number) => Number(tab) === REPORT_TYPES.INVENTORY
+    ? [SUPPLY_CENTERS.AMMO, SUPPLY_CENTERS.TIKSHUV]
+    : [SUPPLY_CENTERS.AMMO];
+
+const getMaterialStandardGroupInclude = () => ({
+    attributes: ["groupId", "materialId"],
+    model: MaterialStandardGroup,
+    as: "standardGroupMaterials",
+    required: false,
+    separate: true,
+    include: [{
+        attributes: ["id", "name", "groupType"],
+        model: StandardGroup,
+        required: false,
+        include: [{
+            attributes: ["id"],
+            model: CategoryGroup,
+            required: false,
+            include: [{
+                attributes: ["id", "description"],
+                model: CategoryDesc,
+                required: false
+            }]
+        }]
+    }]
+});
 
 @Injectable()
 export class MaterialRepository {
@@ -33,10 +67,12 @@ export class MaterialRepository {
                 attributes: ["nickname"],
                 model: MaterialNickname,
                 required: false
-            }],
+            },
+            getMaterialStandardGroupInclude()],
             where: {
                 recordStatus: RECORD_STATUS.ACTIVE,
-                centerId: SUPPLY_CENTERS.AMMO
+                centerId: SUPPLY_CENTERS.AMMO,
+                type: { [Op.in]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL] }
             }
         })
     }
@@ -45,7 +81,7 @@ export class MaterialRepository {
         if (materialIds.length === 0) return Promise.resolve([]);
 
         return this.materialModel.findAll({
-            attributes: ["id", "description", "multiply", "recordStatus", "unitOfMeasurement"],
+            attributes: ["id", "description", "multiply", "recordStatus", "unitOfMeasurement", "type"],
             include: [{
                 attributes: ["nickname"],
                 model: MaterialNickname,
@@ -59,11 +95,12 @@ export class MaterialRepository {
                     model: MainCategory,
                     required: false
                 }]
-            }],
+            },
+            getMaterialStandardGroupInclude()],
             where: {
                 id: { [Op.in]: materialIds },
                 centerId: SUPPLY_CENTERS.AMMO,
-                type: MATERIAL_TYPES.ITEM || MATERIAL_TYPES.TOOL
+                type: { [Op.in]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL] }
             }
         });
     }
@@ -88,15 +125,16 @@ export class MaterialRepository {
                 model: UnitFavoriteMaterial,
                 where: { unitId },
                 required: false
-            }],
+            },
+            getMaterialStandardGroupInclude()],
             where: {
                 [Op.or]: [
                     { id: { [Op.iLike]: `%${filter}%` } },
                     { description: { [Op.iLike]: `%${filter}%` } }
                 ],
                 recordStatus: RECORD_STATUS.ACTIVE,
-                type: { [Op.or]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL] },
-                centerId: SUPPLY_CENTERS.AMMO
+                type: { [Op.in]: getMaterialTypesForTab(tab) },
+                centerId: { [Op.in]: getCenterIdsForTab(tab) }
             },
         });
 
@@ -109,7 +147,7 @@ export class MaterialRepository {
                 required: false,
                 include: [{
                     association: "categoryDesc",
-                    attributes: ["description"],
+                    attributes: ["id", "description"],
                     required: false
                 }]
             }],
@@ -119,9 +157,7 @@ export class MaterialRepository {
                     { name: { [Op.iLike]: `%${filter}%` } }
                 ],
                 groupType: {
-                    [Op.in]: Number(tab) === REPORT_TYPES.INVENTORY
-                        ? [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
-                        : [MATERIAL_TYPES.ITEM]
+                    [Op.in]: getMaterialTypesForTab(tab)
                 }
             }
         });
@@ -172,11 +208,13 @@ export class MaterialRepository {
                 model: UnitFavoriteMaterial,
                 where: { unitId },
                 required: false
-            }],
+            },
+            getMaterialStandardGroupInclude()],
             where: {
                 id: { [Op.in]: materialsIds },
                 recordStatus: RECORD_STATUS.ACTIVE,
-                centerId: SUPPLY_CENTERS.AMMO
+                centerId: { [Op.in]: getCenterIdsForTab(tab) },
+                type: { [Op.in]: getMaterialTypesForTab(tab) }
             },
         });
         const standardGroups = await this.standardGroupModel.findAll({
@@ -188,16 +226,14 @@ export class MaterialRepository {
                 required: false,
                 include: [{
                     association: "categoryDesc",
-                    attributes: ["description"],
+                    attributes: ["id", "description"],
                     required: false
                 }]
             }],
             where: {
                 id: { [Op.in]: materialsIds },
                 groupType: {
-                    [Op.in]: Number(tab) === REPORT_TYPES.INVENTORY
-                        ? [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
-                        : [MATERIAL_TYPES.ITEM]
+                    [Op.in]: getMaterialTypesForTab(tab)
                 }
             }
         })

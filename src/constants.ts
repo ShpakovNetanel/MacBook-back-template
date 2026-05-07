@@ -52,6 +52,7 @@ export const UNIT_STATUSES = {
 
 export const SUPPLY_CENTERS = {
   AMMO: 21,
+  TIKSHUV: 48
 };
 
 export const enum UnitObjectTypes {

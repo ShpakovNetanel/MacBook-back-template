@@ -27,6 +27,41 @@ export type StandardGroupMaterialRow = {
     unitOfMeasurement: string;
 };
 
+const getMaterialStandardGroupInclude = () => ({
+    model: MaterialStandardGroup,
+    as: "standardGroupMaterials",
+    attributes: ["groupId", "materialId"],
+    required: false,
+    separate: true,
+    include: [{
+        model: StandardGroup,
+        attributes: ["id", "name", "groupType"],
+        required: false,
+        include: [{
+            association: "categoryGroup",
+            attributes: ["id", "groupId"],
+            required: false,
+            include: [{
+                association: "categoryDesc",
+                attributes: ["id", "description"],
+                required: false,
+            }],
+        }],
+    }],
+});
+
+const getMaterialCategory = (material: Material) => {
+    if (material.type === MATERIAL_TYPES.TOOL) {
+        return material.standardGroupMaterials
+            ?.find((standardGroupMaterial) => standardGroupMaterial.standardGroup?.categoryGroup?.categoryDesc?.description)
+            ?.standardGroup?.categoryGroup?.categoryDesc?.description
+            ?? material.materialCategory?.mainCategory?.description
+            ?? "";
+    }
+
+    return material.materialCategory?.mainCategory?.description ?? "";
+};
+
 @Injectable()
 export class ReportRepository {
     private readonly logger = new Logger(ReportRepository.name);
@@ -572,7 +607,8 @@ export class ReportRepository {
                         association: "mainCategory",
                         required: false,
                     }],
-                }],
+                },
+                getMaterialStandardGroupInclude()],
             }),
             this.standardGroupModel.findAll({
                 include: [{
@@ -583,7 +619,7 @@ export class ReportRepository {
                     required: false,
                     include: [{
                         association: "categoryDesc",
-                        attributes: ["description"],
+                        attributes: ["id", "description"],
                         required: false,
                     }],
                 }],
@@ -599,9 +635,9 @@ export class ReportRepository {
                 description: material.description ?? "",
                 multiply: Number(material.multiply ?? 0),
                 nickname: material.nickname?.nickname ?? "",
-                category: material.materialCategory?.mainCategory?.description ?? "",
+                category: getMaterialCategory(material),
                 unitOfMeasure: material.unitOfMeasurement ?? "",
-                type: MATERIAL_TYPES.ITEM,
+                type: material.type,
                 isGroup: false
             })),
             ...standardGroups.map((standardGroup) => ({
@@ -860,7 +896,8 @@ export class ReportRepository {
                         as: "mainCategory",
                         required: false,
                     }],
-                }],
+                },
+                getMaterialStandardGroupInclude()],
             }, {
                 model: StandardGroup,
                 as: "standardGroup",
@@ -873,7 +910,7 @@ export class ReportRepository {
                     required: false,
                     include: [{
                         association: "categoryDesc",
-                        attributes: ["description"],
+                        attributes: ["id", "description"],
                         required: false,
                     }],
                 }]
