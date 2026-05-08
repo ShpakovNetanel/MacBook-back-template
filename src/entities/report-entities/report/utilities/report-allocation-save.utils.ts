@@ -46,6 +46,8 @@ const buildBaseItem = (username: string, creationTime: string, modifiedAt: Date)
     modifiedAt,
 });
 
+const isInactiveItem = (status: string | null | undefined) => status === RECORD_STATUS.INACTIVE;
+
 const buildHeader = (
     unitId: number,
     recipientUnitId: number,
@@ -77,6 +79,7 @@ export const mergeMatkalRequisitionAllocations = (
 
     for (const report of requisitionReports) {
         for (const item of report.items ?? []) {
+            if (isInactiveItem(item.status)) continue;
             if (!item.materialId) continue;
 
             const key = `${report.unitId}:${item.materialId}`;
@@ -98,6 +101,7 @@ export const buildAllocationChangesFromRequisitionReports = (requisitionReports:
 
     for (const report of requisitionReports) {
         for (const item of report.items ?? []) {
+            if (isInactiveItem(item.status)) continue;
             if (!item.materialId) continue;
 
             const quantity = toNumber(item.confirmedQuantity ?? item.reportedQuantity);
@@ -265,6 +269,7 @@ export const buildNextLevelAllocationDraftChanges = ({
 
     for (const report of requisitionReports) {
         for (const item of report.items ?? []) {
+            if (isInactiveItem(item.status)) continue;
             if (!item.materialId) continue;
             const key = `${report.recipientUnitId}:${report.unitId}:${item.materialId}`;
             requisitionByRecipientChildMaterial.set(

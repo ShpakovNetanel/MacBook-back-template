@@ -1,3 +1,4 @@
+import { RECORD_STATUS, UNIT_STATUSES } from "../../../../../src/constants";
 import {
     buildAllocationBalanceUpdates,
     buildDownloadAllocationChanges,
@@ -22,6 +23,7 @@ describe("report-allocation-save utils", () => {
             items: [
                 { materialId: "A", confirmedQuantity: 8 },
                 { materialId: "B", confirmedQuantity: 3 },
+                { materialId: "C", confirmedQuantity: 5, status: RECORD_STATUS.INACTIVE },
             ],
         }] as any);
 
@@ -84,6 +86,7 @@ describe("report-allocation-save utils", () => {
     it("prefers matkal allocation reports over requisitions when allocation records exist", () => {
         const changes = buildDownloadAllocationChanges({
             isMatkal: true,
+            matkalStatusId: UNIT_STATUSES.WAITING_FOR_ALLOCATION,
             outgoingAllocationReports: [{
                 unitId: 1,
                 recipientUnitId: 10,
@@ -139,6 +142,36 @@ describe("report-allocation-save utils", () => {
         }));
     });
 
+    it("does not create Matkal allocations from inactive requisition items", () => {
+        const changes = buildDownloadAllocationChanges({
+            isMatkal: true,
+            matkalStatusId: UNIT_STATUSES.REQUESTING,
+            outgoingAllocationReports: [],
+            requisitionReports: [{
+                unitId: 10,
+                recipientUnitId: 1,
+                items: [{
+                    materialId: "inactive-material",
+                    confirmedQuantity: 5,
+                    reportedQuantity: 5,
+                    status: RECORD_STATUS.INACTIVE,
+                }, {
+                    materialId: "active-material",
+                    confirmedQuantity: 7,
+                    reportedQuantity: 7,
+                    status: RECORD_STATUS.ACTIVE,
+                }],
+            }] as any,
+            isDvhExcel: false,
+        });
+
+        expect(changes).toEqual([{
+            unitId: 10,
+            materialId: "active-material",
+            quantity: 7,
+        }]);
+    });
+
     it("seeds next-level drafts from requisitions and defaults to zero", () => {
         const reports = buildNextLevelAllocationDraftChanges({
             changes: [{
@@ -154,7 +187,10 @@ describe("report-allocation-save utils", () => {
             requisitionReports: [{
                 unitId: 100,
                 recipientUnitId: 10,
-                items: [{ materialId: "A", confirmedQuantity: 5 }],
+                items: [
+                    { materialId: "A", confirmedQuantity: 5 },
+                    { materialId: "B", confirmedQuantity: 3, status: RECORD_STATUS.INACTIVE },
+                ],
             }] as any,
         });
 
@@ -169,6 +205,8 @@ describe("report-allocation-save utils", () => {
             materialId: "A",
             reportedQuantity: 0,
         }));
+        expect(reports[0].items).toHaveLength(1);
+        expect(reports[1].items).toHaveLength(1);
     });
 
     it("subtracts allocations from incoming allocation balances while preserving confirmed quantity", () => {
