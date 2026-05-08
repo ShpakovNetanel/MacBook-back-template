@@ -14,7 +14,7 @@ import type {
 } from "../report.types";
 import { MATERIAL_TYPES, RECORD_STATUS, REPORT_TYPES } from "../../../../constants";
 import { UnitRelation } from "../../../unit-entities/unit-relations/unit-relation.model";
-import { isDefined } from "remeda";
+import { isDefined, isNullish } from "remeda";
 
 type FetchReportsParams = {
     screenUnitId: number;
@@ -98,7 +98,7 @@ const buildMaterialDto = (
     nickname: material?.nickname?.nickname ?? standardGroup?.nickname?.nickname ?? "",
     category: getMaterialCategory(material, standardGroup),
     unitOfMeasure: material?.unitOfMeasurement ?? "יח",
-    type: isDefined(material)
+    type: !isNullish(material)
         ? material.type
         : isDefined(standardGroup)
             ? standardGroup.groupType

@@ -18,4 +18,8 @@ export class ReportItemController {
         });
     }
 
+    @Delete('allocations')
+    deleteAllAllocations(@Req() request: Request) {
+        return this.service.deleteAllAllocations(request['date']);
+    }
 }

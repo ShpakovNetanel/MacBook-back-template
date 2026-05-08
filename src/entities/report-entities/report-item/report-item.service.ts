@@ -74,12 +74,33 @@ export class ReportItemService {
             };
         } catch (error) {
             console.log(error);
-            
+
             await transaction.rollback();
             throw new BadRequestException({
                 message: 'נכשלה אכילת ההקצאה, יש לנסות שוב',
                 type: MESSAGE_TYPES.FAILURE
             });
+        }
+    }
+
+    async deleteAllAllocations(date: string) {
+        try {
+
+            const allocations = await this.repository.fetchReports({
+                date,
+                reportsTypesIds: [REPORT_TYPES.ALLOCATION]
+            });
+
+            const allocationsItems = allocations.flatMap(allocation => (allocation.items ?? []).map(
+                item => ({
+                    ...item.dataValues,
+                    status: RECORD_STATUS.INACTIVE
+                }) as IReportItem
+            ));
+
+            return this.repository.updateReportsItems(allocationsItems);
+        } catch (error) {
+            throw new BadRequestException();
         }
     }
 }

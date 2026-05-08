@@ -2,7 +2,7 @@ import { BadGatewayException, BadRequestException, Injectable, Logger } from "@n
 import { isEmptyish } from "remeda";
 import { Error } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
-import { MESSAGE_TYPES, REPORT_TYPES, UNIT_LEVELS } from "../../../constants";
+import { MATKAL_UNIT_ID, MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS } from "../../../constants";
 import { formatDate } from "../../../utils/date";
 import { UnitHierarchyService } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.service";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
@@ -200,7 +200,7 @@ export class ReportService {
 
             if (isEmptyish(data)) {
                 console.log("AS");
-                
+
                 throw new BadGatewayException({
                     message: 'לא נמצאו מק״טים מועדפים',
                     type: MESSAGE_TYPES.WARNING
@@ -217,7 +217,7 @@ export class ReportService {
 
             throw new BadGatewayException({
                 message: error?.response?.message ?? 'הבאת מק״טים מועדפים נכשלה, יש לנסות שנית',
-                type: error?.response?.type
+                type: error?.response?.type ?? MESSAGE_TYPES.FAILURE
             })
         }
     }

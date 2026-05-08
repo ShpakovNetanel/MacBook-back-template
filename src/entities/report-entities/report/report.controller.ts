@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Req } from '@nestjs/common';
 import { RequireScreenUnitRequesting } from '../../../common/decorators/require-screen-unit-requesting.decorator';
 import { ReportService } from './report.service';
 import type {

@@ -12,8 +12,8 @@ export type EatAllocationDTO = {
 }
 
 export type ReportItemKey = {
-    recipientUnitId: number;
+    recipientUnitId?: number;
     reportsTypesIds: number[];
-    materialId: string;
+    materialId?: string;
     date: string;
 }
