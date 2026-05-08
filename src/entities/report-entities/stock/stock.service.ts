@@ -31,13 +31,16 @@ export class StockService {
 
     const visibleChildren = rootUnitChildrenHierarchy.filter(
       (child) =>
-        child.isEmergencyUnit &&
-        child.children[0]?.status?.id !== UNIT_STATUSES.REQUESTING,
+        child.isEmergencyUnit && child.status?.id !== UNIT_STATUSES.REQUESTING,
     );
 
     const allRelatedUnitIds = visibleChildren.flatMap((rootUnitChild) =>
       rootUnitChild.children
-        .filter((child) => child.level === UNIT_LEVELS.GDUD)
+        .filter(
+          (child) =>
+            child.level === UNIT_LEVELS.GDUD &&
+            child.status?.id !== UNIT_STATUSES.REQUESTING,
+        )
         .map((child) => child.id),
     );
 
@@ -49,6 +52,7 @@ export class StockService {
         level: UNIT_LEVELS.MATKAL,
         simul: '',
         isEmergencyUnit: false,
+        status: { id: 0, description: '' },
         children: [
           {
             id: MARTACH_UNIT_ID,
