@@ -36,6 +36,7 @@ import {
     buildDownloadAllocationChanges,
     buildNextLevelAllocationDraftChanges
 } from "./utilities/report-allocation-save.utils";
+import { aggregateAllocationDuhRows } from "./utilities/allocation-duh-export.utils";
 import {
     buildFavoriteReportsResponse,
     buildReportsMaterialsResponse,
@@ -554,7 +555,7 @@ export class ReportService {
 
         return {
             fileName: `נתוני דו״ה ${date}.xlsx`,
-            rows,
+            rows: aggregateAllocationDuhRows(rows),
             groupConversions: standardGroupMaterials.map((mapping) => ({
                 groupId: mapping.groupId,
                 groupDescription: mapping.groupDescription,
