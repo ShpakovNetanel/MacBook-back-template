@@ -23,9 +23,19 @@ export class MaterialService {
     constructor(private readonly repository: MaterialRepository) { }
 
     async fetchExcelMaterials() {
-        const materials = await this.repository.fetchExcelMaterials();
+        const { materials, standardGroups } = await this.repository.fetchExcelMaterials();
 
-        return materials.map((material) => ({
+        const standardGroupResults = standardGroups.map((group) => ({
+            id: group.id,
+            description: group.name,
+            unitOfMeasure: 'יח',
+            multiply: 0,
+            nickname: group.nickname?.nickname ?? "",
+            category: group.categoryGroup?.categoryDesc?.description ?? '',
+            type: group.groupType,
+        }));
+
+        const materialsResults = materials.map((material) => ({
             id: material.dataValues.id,
             description: material.dataValues.description,
             unitOfMeasure: material.dataValues.unitOfMeasurement,
@@ -33,7 +43,9 @@ export class MaterialService {
             nickname: material.nickname?.dataValues.nickname,
             category: getMaterialCategory(material, true),
             type: material.dataValues.type
-        }))
+        }));
+
+        return [...materialsResults, ...standardGroupResults];
     }
 
     async fetchTwenty(filter: string, unitId: number, tab: number) {

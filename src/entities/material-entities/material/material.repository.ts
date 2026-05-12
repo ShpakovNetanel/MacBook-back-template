@@ -53,8 +53,8 @@ export class MaterialRepository {
         @InjectModel(StandardGroup) private readonly standardGroupModel: typeof StandardGroup
     ) { }
 
-    fetchExcelMaterials() {
-        return this.materialModel.findAll({
+    async fetchExcelMaterials() {
+        const materials = await this.materialModel.findAll({
             include: [{
                 attributes: ["materialId"],
                 model: MaterialCategory,
@@ -71,10 +71,38 @@ export class MaterialRepository {
             getMaterialStandardGroupInclude()],
             where: {
                 recordStatus: RECORD_STATUS.ACTIVE,
-                centerId: SUPPLY_CENTERS.AMMO,
-                type: { [Op.in]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL] }
+                [Op.or]: [
+                    {
+                        centerId: SUPPLY_CENTERS.AMMO,
+                        type: MATERIAL_TYPES.ITEM
+                    },
+                    {
+                        centerId: SUPPLY_CENTERS.TIKSHUV,
+                        type: MATERIAL_TYPES.TOOL
+                    }
+                ]
             }
-        })
+        });
+
+        const standardGroups = await this.standardGroupModel.findAll({
+            include: [{
+                association: "nickname",
+                required: false
+            }, {
+                association: "categoryGroup",
+                required: false,
+                include: [{
+                    association: "categoryDesc",
+                    attributes: ["id", "description"],
+                    required: false
+                }]
+            }],
+            where: {
+                groupType: MATERIAL_TYPES.ITEM
+            }
+        });
+
+        return { materials, standardGroups };
     }
 
     fetchMaterialsForExcelImport(materialIds: string[]) {
