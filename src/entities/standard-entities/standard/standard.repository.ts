@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Op } from "sequelize";
 import { Material } from "src/entities/material-entities/material/material.model";
+import { getMaterialSupplyCenterTypeWhere } from "src/entities/material-entities/material/material-query.utils";
 import { Unit } from "src/entities/unit-entities/unit/unit.model";
 import { UnitStatus } from "src/entities/unit-entities/units-statuses/units-statuses.model";
 import { RelevantStandard, RelevantStandardValue } from "./standard.types";
@@ -225,6 +226,7 @@ export class StandardRepository {
     async getAllMaterials(): Promise<Map<string, string>> {
         const rows = await this.materialModel.findAll({
             attributes: ["id", "description"],
+            where: getMaterialSupplyCenterTypeWhere(),
         });
         const result = new Map<string, string>();
         for (const row of rows) {

@@ -4,7 +4,7 @@ import { Material } from "./material.model";
 import { Op } from "sequelize";
 import { MaterialCategory } from "../material-category/material-category.model";
 import { MainCategory } from "../categories/categories.model";
-import { MATERIAL_TYPES, RECORD_STATUS, REPORT_TYPES, SUPPLY_CENTERS } from "../../../constants";
+import { MATERIAL_TYPES, RECORD_STATUS, REPORT_TYPES } from "../../../constants";
 import { MaterialNickname } from "../material-nickname/material-nickname.model";
 import { UnitFavoriteMaterial } from "../unit-favorite-material/unit-favorite-material.model";
 import { Comment } from "../../report-entities/comment/comment.model";
@@ -12,14 +12,11 @@ import { StandardGroup } from "../../standard-entities/standard-group/standard-g
 import { MaterialStandardGroup } from "../../standard-entities/material-standard-group/material-standard-group.model";
 import { CategoryDesc } from "src/entities/standard-entities/category-desc/category-desc.model";
 import { CategoryGroup } from "src/entities/standard-entities/category-group/category-group.model";
+import { getMaterialSupplyCenterTypeWhere } from "./material-query.utils";
 
 const getMaterialTypesForTab = (tab?: number) => Number(tab) === REPORT_TYPES.INVENTORY
     ? [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
     : [MATERIAL_TYPES.ITEM];
-
-const getCenterIdsForTab = (tab?: number) => Number(tab) === REPORT_TYPES.INVENTORY
-    ? [SUPPLY_CENTERS.AMMO, SUPPLY_CENTERS.TIKSHUV]
-    : [SUPPLY_CENTERS.AMMO];
 
 const getMaterialStandardGroupInclude = () => ({
     attributes: ["groupId", "materialId"],
@@ -71,16 +68,7 @@ export class MaterialRepository {
             getMaterialStandardGroupInclude()],
             where: {
                 recordStatus: RECORD_STATUS.ACTIVE,
-                [Op.or]: [
-                    {
-                        centerId: SUPPLY_CENTERS.AMMO,
-                        type: MATERIAL_TYPES.ITEM
-                    },
-                    {
-                        centerId: SUPPLY_CENTERS.TIKSHUV,
-                        type: MATERIAL_TYPES.TOOL
-                    }
-                ]
+                ...getMaterialSupplyCenterTypeWhere()
             }
         });
 
@@ -127,8 +115,7 @@ export class MaterialRepository {
             getMaterialStandardGroupInclude()],
             where: {
                 id: { [Op.in]: materialIds },
-                centerId: SUPPLY_CENTERS.AMMO,
-                type: { [Op.in]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL] }
+                ...getMaterialSupplyCenterTypeWhere()
             }
         });
     }
@@ -156,13 +143,16 @@ export class MaterialRepository {
             },
             getMaterialStandardGroupInclude()],
             where: {
-                [Op.or]: [
-                    { id: { [Op.iLike]: `%${filter}%` } },
-                    { description: { [Op.iLike]: `%${filter}%` } }
+                [Op.and]: [
+                    {
+                        [Op.or]: [
+                            { id: { [Op.iLike]: `%${filter}%` } },
+                            { description: { [Op.iLike]: `%${filter}%` } }
+                        ],
+                    },
+                    getMaterialSupplyCenterTypeWhere()
                 ],
                 recordStatus: RECORD_STATUS.ACTIVE,
-                type: { [Op.in]: getMaterialTypesForTab(tab) },
-                centerId: { [Op.in]: getCenterIdsForTab(tab) }
             },
         });
 
@@ -241,8 +231,7 @@ export class MaterialRepository {
             where: {
                 id: { [Op.in]: materialsIds },
                 recordStatus: RECORD_STATUS.ACTIVE,
-                centerId: { [Op.in]: getCenterIdsForTab(tab) },
-                type: { [Op.in]: getMaterialTypesForTab(tab) }
+                ...getMaterialSupplyCenterTypeWhere()
             },
         });
         const standardGroups = await this.standardGroupModel.findAll({

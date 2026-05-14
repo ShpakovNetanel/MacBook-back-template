@@ -8,6 +8,7 @@ import { MainCategory } from "../../material-entities/categories/categories.mode
 import { MaterialCategory } from "../../material-entities/material-category/material-category.model";
 import { MaterialNickname } from "../../material-entities/material-nickname/material-nickname.model";
 import { Material } from "../../material-entities/material/material.model";
+import { getMaterialSupplyCenterTypeWhere } from "../../material-entities/material/material-query.utils";
 import { UnitFavoriteMaterial } from "../../material-entities/unit-favorite-material/unit-favorite-material.model";
 import { MaterialStandardGroup } from "../../standard-entities/material-standard-group/material-standard-group.model";
 import { StandardGroup } from "../../standard-entities/standard-group/standard-group.model";
@@ -595,7 +596,8 @@ export class ReportRepository {
             this.materialModel.findAll({
                 where: {
                     id: { [Op.in]: favoriteIds },
-                    recordStatus: RECORD_STATUS.ACTIVE
+                    recordStatus: RECORD_STATUS.ACTIVE,
+                    ...getMaterialSupplyCenterTypeWhere()
                 },
                 include: [{
                     association: "nickname",
