@@ -12,6 +12,7 @@ import { StandardGroup } from "../../standard-entities/standard-group/standard-g
 import { UnitHierarchyModule } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.module";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
 import { UnitStatusType } from "../../unit-entities/unit-status-type/unit-status-type.model";
+import { UnitStatusModule } from "../../unit-entities/units-statuses/units-statuses.module";
 import { UnitModule } from "../../unit-entities/unit/unit.module";
 import { Unit } from "../../unit-entities/unit/unit.model";
 import { UnitStatus } from "../../unit-entities/units-statuses/units-statuses.model";
@@ -44,6 +45,7 @@ import { ReportService } from "./report.service";
         Stock
     ]),
         UnitHierarchyModule,
+        UnitStatusModule,
         UnitModule],
     controllers: [ReportController],
     providers: [ReportService, ReportRepository],

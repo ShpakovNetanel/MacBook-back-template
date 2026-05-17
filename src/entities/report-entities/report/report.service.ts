@@ -2,11 +2,12 @@ import { BadGatewayException, BadRequestException, Injectable, Logger } from "@n
 import { isEmptyish } from "remeda";
 import { Error } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
-import { MATKAL_UNIT_ID, MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS } from "../../../constants";
+import { MATKAL_UNIT_ID, MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS, UNIT_STATUSES } from "../../../constants";
 import { formatDate } from "../../../utils/date";
 import { UnitHierarchyService } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.service";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
 import { UnitRepository } from "../../unit-entities/unit/unit.repository";
+import { UnitStatusService } from "../../unit-entities/units-statuses/units-statuses.service";
 import type { Report } from "./report.model";
 import { ReportRepository, type StandardGroupMaterialRow } from "./report.repository";
 import {
@@ -76,6 +77,7 @@ export class ReportService {
         private readonly sequelize: Sequelize,
         private readonly unitHierarchyService: UnitHierarchyService,
         private readonly unitRepository: UnitRepository,
+        private readonly unitStatusService: UnitStatusService,
     ) { }
 
     async saveReportsChanges(
@@ -320,6 +322,12 @@ export class ReportService {
                 transaction,
                 fieldsToUpdate: ["confirmedQuantity", "reportedQuantity"],
             });
+
+            await this.unitStatusService.updateHierarchyStatusesInTransaction({
+                unitsIds: aggregatedReportsDTO.unitsIds,
+                statusId: UNIT_STATUSES.WAITING_FOR_ALLOCATION,
+                updateHierarchy: true
+            }, date, transaction);
 
             await transaction.commit();
 
@@ -779,6 +787,18 @@ export class ReportService {
                 fieldsToUpdate: ["reportedQuantity"],
             });
 
+            await this.unitStatusService.updateHierarchyStatusesInTransaction({
+                unitsIds: directChildIds,
+                statusId: UNIT_STATUSES.WAITING_FOR_ALLOCATION,
+                updateHierarchy: true
+            }, date, transaction);
+
+            await this.unitStatusService.updateHierarchyStatusesInTransaction({
+                unitsIds: [...directChildIds, screenUnitId],
+                statusId: UNIT_STATUSES.ALLOCATING,
+                updateHierarchy: false
+            }, date, transaction);
+
             const allocationDuhExport = shouldReturnInitialMatkalDuhExport
                 ? await this.buildAllocationDuhExport({
                     date,
@@ -790,9 +810,18 @@ export class ReportService {
                 : null;
 
             await transaction.commit();
+
+            let downloadAllocationDuhExport: AllocationDuhExportDto | null = null;
+            try {
+                downloadAllocationDuhExport = await this.fetchAllocationDuhExport(date, screenUnitId, materialId);
+            } catch (error) {
+                this.logger.error("Failed to build allocation DUH export", error instanceof Error ? error.stack : String(error));
+            }
+
             return {
                 data: {
                     allocationDuhExport,
+                    downloadAllocationDuhExport,
                 },
                 type: MESSAGE_TYPES.SUCCESS,
                 message: "הקצאות הורדו בהצלחה",

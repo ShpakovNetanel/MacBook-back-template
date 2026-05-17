@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectConnection } from "@nestjs/sequelize";
+import { Transaction } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
 import { UnitStatusRepository } from "./units-statuses.repository";
 import { UpdateUnitStatus } from "./DTO/updateUnitStatus";
@@ -18,26 +19,38 @@ export class UnitStatusService {
         const transaction = await this.sequelize.transaction();
 
         try {
-            const hierarchyUnitIds = await this.repository.fetchHierarchyUnitIds(date, unitsStatuses.unitsIds);
-            const targetUnitIds = unitsStatuses.updateHierarchy
-                ? hierarchyUnitIds
-                : unitsStatuses.unitsIds;
-
-            if (unitsStatuses.clearHierarchyStatuses) {
-                return this.repository.clearStatusesForUnitsDate(targetUnitIds, date, transaction);
-            }
-
-            const statusesToSave = targetUnitIds.map(unitId => ({
-                unitId,
-                unitStatusId: unitsStatuses.statusId,
-                date: new Date(date)
-            }));
-
-            await this.repository.updateStatuses(statusesToSave, transaction);
+            const result = await this.updateHierarchyStatusesInTransaction(unitsStatuses, date, transaction);
             await transaction.commit();
+
+            return result;
         } catch (error) {
             console.log(error);
             await transaction.rollback();
+
+            throw error;
         }
+    }
+
+    async updateHierarchyStatusesInTransaction(
+        unitsStatuses: UpdateUnitStatus,
+        date: string,
+        transaction: Transaction,
+    ) {
+        const hierarchyUnitIds = await this.repository.fetchHierarchyUnitIds(date, unitsStatuses.unitsIds, transaction);
+        const targetUnitIds = unitsStatuses.updateHierarchy
+            ? hierarchyUnitIds
+            : unitsStatuses.unitsIds;
+
+        if (unitsStatuses.clearHierarchyStatuses) {
+            return this.repository.clearStatusesForUnitsDate(targetUnitIds, date, transaction);
+        }
+
+        const statusesToSave = targetUnitIds.map(unitId => ({
+            unitId,
+            unitStatusId: unitsStatuses.statusId,
+            date: new Date(date)
+        }));
+
+        await this.repository.updateStatuses(statusesToSave, transaction);
     }
 }
