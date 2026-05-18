@@ -150,7 +150,7 @@ export class MaterialRepository {
                             { description: { [Op.iLike]: `%${filter}%` } }
                         ],
                     },
-                    getMaterialSupplyCenterTypeWhere()
+                    getMaterialSupplyCenterTypeWhere(tab)
                 ],
                 recordStatus: RECORD_STATUS.ACTIVE,
             },
@@ -231,7 +231,7 @@ export class MaterialRepository {
             where: {
                 id: { [Op.in]: materialsIds },
                 recordStatus: RECORD_STATUS.ACTIVE,
-                ...getMaterialSupplyCenterTypeWhere()
+                ...getMaterialSupplyCenterTypeWhere(tab)
             },
         });
         const standardGroups = await this.standardGroupModel.findAll({
