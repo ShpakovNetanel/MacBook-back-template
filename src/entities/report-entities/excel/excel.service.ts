@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import Decimal from "decimal.js";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import { MATERIAL_TYPES, MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS, UNIT_STATUSES } from "../../../constants";
+import { MATERIAL_TYPES, MESSAGE_TYPES, RECORD_STATUS, REPORT_TYPES, SUPPLY_CENTERS, UNIT_LEVELS, UNIT_STATUSES } from "../../../constants";
 import { MaterialRepository } from "../../material-entities/material/material.repository";
 import { UnitHierarchyRepository, UnitLookupRow } from "../../unit-entities/features/unit-hierarchy/unit-hierarchy.repository";
 import { UnitRelation } from "../../unit-entities/unit-relations/unit-relation.model";
@@ -24,7 +24,9 @@ type MaterialImportRow = {
     multiply: number;
     recordStatus: string;
     type: string;
+    centerId?: number;
     unitOfMeasurement?: string;
+    isStandardGroup?: boolean;
     nickname?: {
         nickname?: string;
     };
@@ -42,6 +44,11 @@ type MaterialImportRow = {
             };
         };
     }>;
+    categoryGroup?: {
+        categoryDesc?: {
+            description?: string;
+        };
+    };
 };
 
 type HierarchyUnitSnapshot = {
@@ -74,7 +81,7 @@ const SCREEN_UNIT_NOT_FOUND_MESSAGE = "יחידת המסך לא קיימת במ�
 const UNSUPPORTED_REPORT_TYPE_MESSAGE = "סוג הדיווח אינו נתמך בייבוא האקסל";
 const MATERIAL_NOT_FOUND_MESSAGE = "המק\"ט לא קיים במערכת";
 const MATERIAL_INACTIVE_MESSAGE = "המק\"ט אינו פעיל";
-const TOOL_MATERIAL_INVENTORY_ONLY_MESSAGE = "מק\"ט כלי ניתן לייבוא רק במלאי";
+const TOOL_MATERIAL_INVENTORY_ONLY_MESSAGE = "לא ניתן להזין כלי / קבוצת כלים על סוג דיווח שאינו מלאי";
 const QUANTITY_MUST_BE_POSITIVE_MESSAGE = "הכמות חייבת להיות גדולה מ-0";
 const UNIT_NOT_FOUND_MESSAGE = "היחידה לא קיימת במערכת";
 const SCREEN_ROWS_OUTSIDE_SCREEN_UNIT_MESSAGE = "נתוני המסך מכילים יחידות שאינן תחת יחידת המסך";
@@ -241,9 +248,13 @@ export class ExcelService {
                 multiply: Number(material.multiply),
                 recordStatus: material.recordStatus,
                 type: material.type,
+                centerId: material.centerId,
                 unitOfMeasurement: material.unitOfMeasurement,
+                isStandardGroup: material.isStandardGroup,
                 nickname: material.nickname,
                 materialCategory: material.materialCategory,
+                standardGroupMaterials: material.standardGroupMaterials,
+                categoryGroup: material.categoryGroup,
             });
         }
 
@@ -406,7 +417,7 @@ export class ExcelService {
                 errorMessage = MATERIAL_NOT_FOUND_MESSAGE;
             } else if (material.recordStatus !== RECORD_STATUS.ACTIVE) {
                 errorMessage = MATERIAL_INACTIVE_MESSAGE;
-            } else if (material.type === MATERIAL_TYPES.TOOL && row.reportType !== REPORT_TYPES.INVENTORY) {
+            } else if (this.isInventoryOnlyToolMaterial(material) && row.reportType !== REPORT_TYPES.INVENTORY) {
                 errorMessage = TOOL_MATERIAL_INVENTORY_ONLY_MESSAGE;
             } else if (row.quantity < 0) {
                 errorMessage = QUANTITY_MUST_BE_POSITIVE_MESSAGE;
@@ -639,6 +650,10 @@ export class ExcelService {
     private getMaterialCategory(material?: MaterialImportRow) {
         if (!material) return "";
 
+        if (material.isStandardGroup) {
+            return material.categoryGroup?.categoryDesc?.description ?? "";
+        }
+
         if (material.type === MATERIAL_TYPES.TOOL) {
             return material.standardGroupMaterials
                 ?.find((standardGroupMaterial) => standardGroupMaterial.standardGroup?.categoryGroup?.categoryDesc?.description)
@@ -646,6 +661,11 @@ export class ExcelService {
         }
 
         return material.materialCategory?.mainCategory?.description ?? "";
+    }
+
+    private isInventoryOnlyToolMaterial(material: MaterialImportRow) {
+        return material.type === MATERIAL_TYPES.TOOL
+            && (material.centerId === SUPPLY_CENTERS.TIKSHUV || material.isStandardGroup);
     }
 
     private buildUnitDto(unitId: number, importScope: ImportScope): UnitDto {

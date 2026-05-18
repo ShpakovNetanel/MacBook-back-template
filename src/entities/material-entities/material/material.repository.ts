@@ -68,7 +68,7 @@ export class MaterialRepository {
             getMaterialStandardGroupInclude()],
             where: {
                 recordStatus: RECORD_STATUS.ACTIVE,
-                ...getMaterialSupplyCenterTypeWhere()
+                ...getMaterialSupplyCenterTypeWhere(REPORT_TYPES.INVENTORY)
             }
         });
 
@@ -86,38 +86,76 @@ export class MaterialRepository {
                 }]
             }],
             where: {
-                groupType: MATERIAL_TYPES.ITEM
+                groupType: {
+                    [Op.in]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
+                }
             }
         });
 
         return { materials, standardGroups };
     }
 
-    fetchMaterialsForExcelImport(materialIds: string[]) {
+    async fetchMaterialsForExcelImport(materialIds: string[]) {
         if (materialIds.length === 0) return Promise.resolve([]);
 
-        return this.materialModel.findAll({
-            attributes: ["id", "description", "multiply", "recordStatus", "unitOfMeasurement", "type"],
-            include: [{
-                attributes: ["nickname"],
-                model: MaterialNickname,
-                required: false
-            }, {
-                attributes: ["materialId"],
-                model: MaterialCategory,
-                required: false,
+        const [materials, standardGroups] = await Promise.all([
+            this.materialModel.findAll({
+                attributes: ["id", "description", "multiply", "recordStatus", "unitOfMeasurement", "type", "centerId"],
                 include: [{
-                    attributes: ["description"],
-                    model: MainCategory,
+                    attributes: ["nickname"],
+                    model: MaterialNickname,
                     required: false
-                }]
-            },
-            getMaterialStandardGroupInclude()],
-            where: {
-                id: { [Op.in]: materialIds },
-                ...getMaterialSupplyCenterTypeWhere()
-            }
-        });
+                }, {
+                    attributes: ["materialId"],
+                    model: MaterialCategory,
+                    required: false,
+                    include: [{
+                        attributes: ["description"],
+                        model: MainCategory,
+                        required: false
+                    }]
+                },
+                getMaterialStandardGroupInclude()],
+                where: {
+                    id: { [Op.in]: materialIds },
+                    ...getMaterialSupplyCenterTypeWhere(REPORT_TYPES.INVENTORY)
+                }
+            }),
+            this.standardGroupModel.findAll({
+                include: [{
+                    association: "nickname",
+                    required: false
+                }, {
+                    association: "categoryGroup",
+                    required: false,
+                    include: [{
+                        association: "categoryDesc",
+                        attributes: ["id", "description"],
+                        required: false
+                    }]
+                }],
+                where: {
+                    id: { [Op.in]: materialIds },
+                    groupType: {
+                        [Op.in]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
+                    }
+                }
+            })
+        ]);
+
+        const standardGroupMaterials = standardGroups.map((group) => ({
+            id: group.id,
+            description: group.name,
+            multiply: 0,
+            recordStatus: RECORD_STATUS.ACTIVE,
+            unitOfMeasurement: "יח",
+            type: group.groupType,
+            nickname: group.nickname,
+            categoryGroup: group.categoryGroup,
+            isStandardGroup: true,
+        }));
+
+        return [...materials, ...standardGroupMaterials];
     }
 
     async fetchBySearch(filter: string, unitId: number, tab: number) {
