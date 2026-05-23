@@ -3,6 +3,9 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { SequelizeModule, SequelizeModuleOptions } from "@nestjs/sequelize";
 import { ENVIRONMENTS } from "./constants";
 import modules from './modules';
+import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
+import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
+import { CentralLogReporterService } from "./common/services/central-log-reporter.service";
 
 const sequelizeInitializer = (configService: ConfigService) =>
     ENVIRONMENTS.NONPROD === configService.get<string>('ENVIRONMENT')
@@ -42,6 +45,11 @@ const sequelizeInitializer = (configService: ConfigService) =>
             })
         }),
         ...modules
+    ],
+    providers: [
+        CentralLogReporterService,
+        ResponseInterceptor,
+        HttpExceptionFilter
     ]
 })
 

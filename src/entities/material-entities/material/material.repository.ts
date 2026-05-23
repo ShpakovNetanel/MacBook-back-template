@@ -1,18 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
-import { Material } from "./material.model";
 import { Op } from "sequelize";
-import { MaterialCategory } from "../material-category/material-category.model";
-import { MainCategory } from "../categories/categories.model";
-import { MATERIAL_TYPES, RECORD_STATUS, REPORT_TYPES } from "../../../constants";
-import { MaterialNickname } from "../material-nickname/material-nickname.model";
-import { UnitFavoriteMaterial } from "../unit-favorite-material/unit-favorite-material.model";
-import { Comment } from "../../report-entities/comment/comment.model";
-import { StandardGroup } from "../../standard-entities/standard-group/standard-group.model";
-import { MaterialStandardGroup } from "../../standard-entities/material-standard-group/material-standard-group.model";
 import { CategoryDesc } from "src/entities/standard-entities/category-desc/category-desc.model";
 import { CategoryGroup } from "src/entities/standard-entities/category-group/category-group.model";
-import { getMaterialSupplyCenterTypeWhere } from "./material-query.utils";
+import { MATERIAL_TYPES, RECORD_STATUS, REPORT_TYPES } from "../../../constants";
+import { Comment } from "../../report-entities/comment/comment.model";
+import { MaterialStandardGroup } from "../../standard-entities/material-standard-group/material-standard-group.model";
+import { StandardGroup } from "../../standard-entities/standard-group/standard-group.model";
+import { MainCategory } from "../categories/categories.model";
+import { MaterialCategory } from "../material-category/material-category.model";
+import { MaterialNickname } from "../material-nickname/material-nickname.model";
+import { UnitFavoriteMaterial } from "../unit-favorite-material/unit-favorite-material.model";
+import { getActiveToolStandardGroupConstraint, getMaterialSupplyCenterTypeWhere } from "./material-query.utils";
+import { Material } from "./material.model";
 
 const getMaterialTypesForTab = (tab?: number) => Number(tab) === REPORT_TYPES.INVENTORY
     ? [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
@@ -27,7 +27,7 @@ const getMaterialStandardGroupInclude = () => ({
     include: [{
         attributes: ["id", "name", "groupType"],
         model: StandardGroup,
-        required: false,
+        required: true,
         include: [{
             attributes: ["id"],
             model: CategoryGroup,
@@ -37,7 +37,10 @@ const getMaterialStandardGroupInclude = () => ({
                 model: CategoryDesc,
                 required: false
             }]
-        }]
+        }],
+        where: {
+            status: RECORD_STATUS.ACTIVE,
+        }
     }]
 });
 
@@ -68,7 +71,10 @@ export class MaterialRepository {
             getMaterialStandardGroupInclude()],
             where: {
                 recordStatus: RECORD_STATUS.ACTIVE,
-                ...getMaterialSupplyCenterTypeWhere(REPORT_TYPES.INVENTORY)
+                [Op.and]: [
+                    getMaterialSupplyCenterTypeWhere(REPORT_TYPES.INVENTORY),
+                    getActiveToolStandardGroupConstraint()
+                ]
             }
         });
 
@@ -88,7 +94,8 @@ export class MaterialRepository {
             where: {
                 groupType: {
                     [Op.in]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
-                }
+                },
+                status: RECORD_STATUS.ACTIVE,
             }
         });
 
@@ -118,7 +125,10 @@ export class MaterialRepository {
                 getMaterialStandardGroupInclude()],
                 where: {
                     id: { [Op.in]: materialIds },
-                    ...getMaterialSupplyCenterTypeWhere(REPORT_TYPES.INVENTORY)
+                    [Op.and]: [
+                        getMaterialSupplyCenterTypeWhere(REPORT_TYPES.INVENTORY),
+                        getActiveToolStandardGroupConstraint()
+                    ]
                 }
             }),
             this.standardGroupModel.findAll({
@@ -138,7 +148,8 @@ export class MaterialRepository {
                     id: { [Op.in]: materialIds },
                     groupType: {
                         [Op.in]: [MATERIAL_TYPES.ITEM, MATERIAL_TYPES.TOOL]
-                    }
+                    },
+                    status: RECORD_STATUS.ACTIVE
                 }
             })
         ]);
@@ -188,7 +199,8 @@ export class MaterialRepository {
                             { description: { [Op.iLike]: `%${filter}%` } }
                         ],
                     },
-                    getMaterialSupplyCenterTypeWhere(tab)
+                    getMaterialSupplyCenterTypeWhere(tab),
+                    getActiveToolStandardGroupConstraint()
                 ],
                 recordStatus: RECORD_STATUS.ACTIVE,
             },
@@ -214,7 +226,8 @@ export class MaterialRepository {
                 ],
                 groupType: {
                     [Op.in]: getMaterialTypesForTab(tab)
-                }
+                },
+                status: RECORD_STATUS.ACTIVE
             }
         });
 
@@ -269,7 +282,10 @@ export class MaterialRepository {
             where: {
                 id: { [Op.in]: materialsIds },
                 recordStatus: RECORD_STATUS.ACTIVE,
-                ...getMaterialSupplyCenterTypeWhere(tab)
+                [Op.and]: [
+                    getMaterialSupplyCenterTypeWhere(tab),
+                    getActiveToolStandardGroupConstraint()
+                ]
             },
         });
         const standardGroups = await this.standardGroupModel.findAll({
@@ -289,7 +305,8 @@ export class MaterialRepository {
                 id: { [Op.in]: materialsIds },
                 groupType: {
                     [Op.in]: getMaterialTypesForTab(tab)
-                }
+                },
+                status: RECORD_STATUS.ACTIVE
             }
         })
         const favoriteIds = await this.fetchFavoriteIds(unitId);

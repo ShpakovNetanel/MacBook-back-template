@@ -17,8 +17,8 @@ async function bootstrap() {
     if (req.path.startsWith('/api-docs') || req.path.startsWith('/server-time')) return next();
     new HeadersMiddeware().use(req, res, next);
   });
-  app.useGlobalInterceptors(new ResponseInterceptor());
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalInterceptors(app.get(ResponseInterceptor));
+  app.useGlobalFilters(app.get(HttpExceptionFilter));
 
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb' }));

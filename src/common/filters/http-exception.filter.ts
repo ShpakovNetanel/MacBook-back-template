@@ -2,56 +2,45 @@ import {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
-  HttpException,
-  HttpStatus,
-} from "@nestjs/common";
-
-const normalizeMessage = (value: unknown): string => {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.map(String).join(", ");
-  if (value && typeof value === "object" && "message" in value) {
-    const message = (value as { message?: unknown }).message;
-    if (typeof message === "string") return message;
-    if (Array.isArray(message)) return message.map(String).join(", ");
-  }
-  return "Internal server error";
-};
-
-const normalizeType = (value: unknown): string | null => {
-  if (!value || typeof value !== "object") return null;
-  if (!("type" in value)) return null;
-  const type = (value as { type?: unknown }).type;
-  return typeof type === "string" ? type : null;
-};
+  Injectable,
+} from '@nestjs/common';
+import {
+  getErrorStatus,
+  getExceptionResponseType,
+  mapExceptionToLogType,
+  normalizeClientErrorMessage,
+  normalizeClientResponseType,
+} from '../logging/central-log-message.utils';
+import {
+  getRequestPath,
+  getUsername,
+  shouldSkipCentralLogRequest,
+} from '../logging/central-log-request.utils';
+import { DabaRequest } from '../logging/central-log.types';
+import { CentralLogReporterService } from '../services/central-log-reporter.service';
 
 @Catch()
+@Injectable()
 export class HttpExceptionFilter implements ExceptionFilter {
+  constructor(private readonly centralLogReporter: CentralLogReporterService) {}
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
+    const request = ctx.getRequest<DabaRequest>();
     const response = ctx.getResponse();
 
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    const status = getErrorStatus(exception);
+    const responseType = getExceptionResponseType(exception);
+    const normalizedType = normalizeClientResponseType(responseType);
+    const message = normalizeClientErrorMessage(exception);
 
-    const normalized =
-      exception instanceof HttpException
-        ? normalizeMessage(exception.getResponse())
-        : null;
-    const normalizedType =
-      exception instanceof HttpException
-        ? normalizeType(exception.getResponse())
-        : null;
-
-    const message =
-      normalized && normalized !== "Internal server error"
-        ? normalized
-        : exception instanceof HttpException
-          ? exception.message || "Internal server error"
-          : exception instanceof Error
-            ? exception.message || "Internal server error"
-            : "Internal server error";
+    this.reportUnhandledException(
+      request,
+      status,
+      message,
+      exception,
+      responseType,
+    );
 
     response.status(status).json({
       success: false,
@@ -61,6 +50,29 @@ export class HttpExceptionFilter implements ExceptionFilter {
         message,
         ...(normalizedType ? { type: normalizedType } : {}),
       },
+    });
+  }
+
+  private reportUnhandledException(
+    request: DabaRequest,
+    status: number,
+    message: string,
+    exception: unknown,
+    responseType: unknown,
+  ): void {
+    if (request.centralLogReported || shouldSkipCentralLogRequest(request))
+      return;
+
+    request.centralLogReported = true;
+
+    this.centralLogReporter.report({
+      username: getUsername(request),
+      requestPath: getRequestPath(request),
+      requestMethod: request.method ?? 'REQUEST',
+      type: mapExceptionToLogType(exception, responseType),
+      message: `${request.method ?? 'REQUEST'} ${getRequestPath(request)} נכשל (${status}).\n${
+        exception instanceof Error ? exception.stack || message : message
+      }`,
     });
   }
 }

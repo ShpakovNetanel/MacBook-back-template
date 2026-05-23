@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Req } from "@nestjs/common";
 import { MaterialService } from "./material.service";
 import { PastedMaterialsDto } from "./material.types";
 import { RequireScreenUnitRequesting } from "src/common/decorators/require-screen-unit-requesting.decorator";
@@ -18,10 +18,10 @@ export class MaterialController {
         return this.service.fetchTwenty(filter, Number(request.headers['unit']), tab);
     }
 
-    @Post('paste')
+    @Post('paste/:tab')
     pastedMaterials(@Body() pastedMaterials: PastedMaterialsDto,
         @Req() request: Request,
-        @Query('tab') tab: number) {
+        @Param('tab') tab: number) {
         return this.service.fetchByIds(pastedMaterials, Number(request.headers['unit']), Number(tab));
     }
 }

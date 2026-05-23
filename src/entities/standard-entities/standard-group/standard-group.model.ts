@@ -7,6 +7,7 @@ type IStandardGroup = {
     id: string;
     name: string;
     groupType: string;
+    status: string;
 }
 
 @Table({ tableName: 'standard_groups', timestamps: false })
@@ -20,6 +21,9 @@ export class StandardGroup extends Model<IStandardGroup> {
 
     @Column({ field: "group_type", type: DataTypes.STRING })
     declare groupType: string;
+
+    @Column(DataTypes.STRING(20))
+    declare status: string;
 
     @HasOne(() => MaterialNickname, { foreignKey: "materialId", sourceKey: "id", constraints: false, as: "nickname" })
     declare nickname?: MaterialNickname;
