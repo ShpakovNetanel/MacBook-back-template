@@ -17,7 +17,7 @@ export class UnitHierarchyController {
 
   @Get("hierarchy")
   async getHierarchy(@Req() request: Request) {
-    const username = request?.['username'];
+    const username = request?.['username'] as string ?? '';
 
     return this.service.getHierarchyForUser(username, request?.["date"]);
   }

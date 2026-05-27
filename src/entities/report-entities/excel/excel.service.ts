@@ -409,35 +409,18 @@ export class ExcelService {
         for (const row of excelRows) {
             const material = materialById.get(row.materialId);
             const unit = importScope.unitBySimul.get(row.unitSimul);
-            let errorMessage = "";
+            const errorMessages = this.collectExcelRowErrorMessages(
+                row,
+                material,
+                unit,
+                includedUnitIds,
+                screenUnit
+            );
 
-            if (!SUPPORTED_REPORT_TYPES.has(row.reportType)) {
-                errorMessage = UNSUPPORTED_REPORT_TYPE_MESSAGE;
-            } else if (!material) {
-                errorMessage = MATERIAL_NOT_FOUND_MESSAGE;
-            } else if (material.recordStatus !== RECORD_STATUS.ACTIVE) {
-                errorMessage = MATERIAL_INACTIVE_MESSAGE;
-            } else if (this.isInventoryOnlyToolMaterial(material) && row.reportType !== REPORT_TYPES.INVENTORY) {
-                errorMessage = TOOL_MATERIAL_INVENTORY_ONLY_MESSAGE;
-            } else if (row.quantity < 0) {
-                errorMessage = QUANTITY_MUST_BE_POSITIVE_MESSAGE;
-            } else if (!unit) {
-                errorMessage = UNIT_NOT_FOUND_MESSAGE;
-            } else if (!includedUnitIds.has(unit.unitId) || unit.unitId === screenUnit.unitId) {
-                errorMessage = UNIT_OUTSIDE_OPEN_BRANCHES_MESSAGE;
-            } else if (unit.statusId !== UNIT_STATUSES.WAITING_FOR_ALLOCATION) {
-                errorMessage = UNIT_STATUS_INVALID_MESSAGE;
-            } else if (
-                (row.reportType === REPORT_TYPES.INVENTORY || row.reportType === REPORT_TYPES.USAGE) &&
-                unit.level !== UNIT_LEVELS.GDUD
-            ) {
-                errorMessage = INVENTORY_USAGE_LEVEL_MESSAGE;
-            } else if (row.reportType === REPORT_TYPES.REQUEST && unit.level <= screenUnit.level) {
-                errorMessage = REQUEST_LEVEL_MESSAGE;
-            }
-
-            if (errorMessage) {
-                failures.push(this.buildFailure(row, errorMessage, material, unit));
+            if (errorMessages.length > 0) {
+                failures.push(
+                    ...errorMessages.map((errorMessage) => this.buildFailure(row, errorMessage, material, unit))
+                );
                 continue;
             }
 
@@ -451,6 +434,71 @@ export class ExcelService {
             validRows,
             failures: failures
         };
+    }
+
+    private collectExcelRowErrorMessages(
+        row: NormalizedExcelRow,
+        material: MaterialImportRow | undefined,
+        unit: HierarchyUnitSnapshot | undefined,
+        includedUnitIds: Set<number>,
+        screenUnit: HierarchyUnitSnapshot
+    ): string[] {
+        const errorMessages: string[] = [];
+        const isSupportedReportType = SUPPORTED_REPORT_TYPES.has(row.reportType);
+
+        if (!isSupportedReportType) {
+            errorMessages.push(UNSUPPORTED_REPORT_TYPE_MESSAGE);
+        }
+
+        if (!material) {
+            errorMessages.push(MATERIAL_NOT_FOUND_MESSAGE);
+        } else {
+            if (material.recordStatus !== RECORD_STATUS.ACTIVE) {
+                errorMessages.push(MATERIAL_INACTIVE_MESSAGE);
+            }
+
+            if (
+                isSupportedReportType &&
+                this.isInventoryOnlyToolMaterial(material) &&
+                row.reportType !== REPORT_TYPES.INVENTORY
+            ) {
+                errorMessages.push(TOOL_MATERIAL_INVENTORY_ONLY_MESSAGE);
+            }
+        }
+
+        if (row.quantity < 0) {
+            errorMessages.push(QUANTITY_MUST_BE_POSITIVE_MESSAGE);
+        }
+
+        if (!unit) {
+            errorMessages.push(UNIT_NOT_FOUND_MESSAGE);
+        } else {
+            if (!includedUnitIds.has(unit.unitId) || unit.unitId === screenUnit.unitId) {
+                errorMessages.push(UNIT_OUTSIDE_OPEN_BRANCHES_MESSAGE);
+            }
+
+            if (unit.statusId !== UNIT_STATUSES.WAITING_FOR_ALLOCATION) {
+                errorMessages.push(UNIT_STATUS_INVALID_MESSAGE);
+            }
+
+            if (
+                isSupportedReportType &&
+                (row.reportType === REPORT_TYPES.INVENTORY || row.reportType === REPORT_TYPES.USAGE) &&
+                unit.level !== UNIT_LEVELS.GDUD
+            ) {
+                errorMessages.push(INVENTORY_USAGE_LEVEL_MESSAGE);
+            }
+
+            if (
+                isSupportedReportType &&
+                row.reportType === REPORT_TYPES.REQUEST &&
+                unit.level <= screenUnit.level
+            ) {
+                errorMessages.push(REQUEST_LEVEL_MESSAGE);
+            }
+        }
+
+        return errorMessages;
     }
 
     private buildAffectedMaterialsByReportType(validRows: ValidExcelRow[]): Map<number, Set<string>> {
@@ -580,6 +628,8 @@ export class ExcelService {
         material?: MaterialImportRow,
         unit?: HierarchyUnitSnapshot
     ): ExcelImportFailure {
+        const rowNumber = Number.isFinite(row.rowNumber) ? row.rowNumber : 0;
+
         return {
             reportType: Number.isFinite(row.reportType) ? row.reportType : -1,
             materialId: row.materialId,
@@ -587,8 +637,8 @@ export class ExcelService {
             quantity: Number.isFinite(row.quantity) ? row.quantity : 0,
             materialDesc: material?.description ?? "",
             unitDesc: unit?.description ?? "",
-            rowNumber: Number.isFinite(row.rowNumber) ? row.rowNumber : 0,
-            errorMessage,
+            rowNumber,
+            errorMessage: `${errorMessage} בשורה ${rowNumber}`,
         };
     }
 

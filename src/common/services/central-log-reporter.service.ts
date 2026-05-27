@@ -28,10 +28,7 @@ export class CentralLogReporterService {
   }
 
   private getEndpoint(): string | null {
-    const baseUrl = this.configService.get<string>(
-      'ERRORS_SERVICE_URL',
-      'http://localhost:3005',
-    );
+    const baseUrl = this.configService.get<string>('LOGS_SERVICE_HOST',);
     const normalizedBaseUrl = baseUrl?.trim().replace(/\/$/, '');
 
     return normalizedBaseUrl ? `${normalizedBaseUrl}/api/logs` : null;
@@ -39,7 +36,7 @@ export class CentralLogReporterService {
 
   private getTimeoutMs(): number {
     const timeout = Number(
-      this.configService.get<string>('ERRORS_LOGGER_TIMEOUT_MS', '1500'),
+      this.configService.get<string>('LOGS_SERVICE_TIMEOUT_MS', '1500'),
     );
 
     return Number.isFinite(timeout) && timeout > 0 ? timeout : 1500;
