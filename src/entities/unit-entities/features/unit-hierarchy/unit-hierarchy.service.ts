@@ -46,6 +46,13 @@ const LOWER_UNIT_HAS_ANOTHER_ACTIVE_RELATION_ERROR =
   'החידה שניסית להוסיף מקושרת ליחידה אחרת';
 const RELATION_ALREADY_EXISTS_ERROR = 'הקשר כבר קיים';
 const ADD_PARENT_LOCKED_ERROR = 'יחידת האב נעולה, אין אפשרות ליצור את הקשר';
+const UNIT_COMBOBOX_RESULT_LIMIT = 20;
+
+type SearchUnitsComboboxOptions = {
+  filter: string;
+  currentLevel: number;
+  parentUnitId?: number;
+};
 
 @Injectable()
 export class UnitHierarchyService {
@@ -229,6 +236,100 @@ export class UnitHierarchyService {
       if (a.level !== b.level) return a.level - b.level;
       return a.id - b.id;
     });
+  }
+
+  async searchUnitsCombobox(
+    date: string,
+    { filter, currentLevel, parentUnitId }: SearchUnitsComboboxOptions,
+  ) {
+    if (!Number.isFinite(currentLevel)) return [];
+
+    const unitDetails = await this.repository.fetchActiveUnitDetailsBySearch(
+      date,
+      {
+        filter,
+        currentLevel,
+        limit: UNIT_COMBOBOX_RESULT_LIMIT,
+      },
+    );
+
+    if (unitDetails.length === 0) return [];
+
+    const uniqueUnitIds = Array.from(
+      new Set(unitDetails.map((detail) => detail.unitId)),
+    );
+    const directParentRelations =
+      await this.repository.fetchDirectParentRelations(date, uniqueUnitIds);
+    const parentUnitIds = Array.from(
+      new Set(directParentRelations.map((relation) => relation.unitId)),
+    );
+    const parentDetails = await this.repository.fetchActiveUnitDetailsByIds(
+      date,
+      parentUnitIds,
+    );
+    const unitStatuses = await this.repository.fetchUnitStatusesForDate(
+      date,
+      Array.from(new Set([...uniqueUnitIds, ...parentUnitIds])),
+    );
+
+    const detailByUnit = new Map<number, Unit>();
+    for (const detail of [...unitDetails, ...parentDetails]) {
+      if (!detailByUnit.has(detail.unitId)) {
+        detailByUnit.set(detail.unitId, detail);
+      }
+    }
+
+    const statusByUnit = new Map<number, UnitStatus>();
+    for (const status of unitStatuses) {
+      if (!statusByUnit.has(status.unitId)) {
+        statusByUnit.set(status.unitId, status);
+      }
+    }
+
+    const parentByChild = new Map<number, number>();
+    for (const relation of directParentRelations) {
+      if (!parentByChild.has(relation.relatedUnitId)) {
+        parentByChild.set(relation.relatedUnitId, relation.unitId);
+      }
+    }
+
+    return uniqueUnitIds
+      .map((unitId): UnitHierarchyNode => {
+        const detail = detailByUnit.get(unitId);
+        const status =
+          statusByUnit.get(unitId)?.unitStatus?.dataValues ?? DEFAULT_STATUS;
+        const directParentId = parentByChild.get(unitId);
+        const parentStatus = directParentId
+          ? statusByUnit.get(directParentId)?.unitStatus?.dataValues ??
+            DEFAULT_STATUS
+          : DEFAULT_STATUS;
+        const parent = directParentId
+          ? {
+              id: directParentId,
+              description: detailByUnit.get(directParentId)?.description ?? '',
+              level: detailByUnit.get(directParentId)?.unitLevelId ?? 0,
+              simul: detailByUnit.get(directParentId)?.tsavIrgunCodeId ?? '',
+              status: parentStatus,
+            }
+          : null;
+
+        return {
+          id: unitId,
+          description: detail?.description ?? '',
+          level: detail?.unitLevelId ?? 0,
+          simul: detail?.tsavIrgunCodeId ?? '',
+          isEmergencyUnit: false,
+          status,
+          parent,
+        };
+      })
+      .filter(
+        (unit) => parentUnitId === undefined || unit.parent?.id !== parentUnitId,
+      )
+      .sort((left, right) => {
+        if (left.level !== right.level) return left.level - right.level;
+        return left.id - right.id;
+      });
   }
 
   async removeUnitRelation(

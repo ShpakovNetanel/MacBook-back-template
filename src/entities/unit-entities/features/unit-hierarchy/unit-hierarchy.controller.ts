@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, Post, Put, Req } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Post, Put, Query, Req } from "@nestjs/common";
 import { UnitHierarchyService } from "./unit-hierarchy.service";
 import type { Request } from "express";
 import { RemoveUnitRelationDto } from "./DTO/remove-unit-relation.dto";
@@ -9,6 +9,20 @@ import { RequireScreenUnitRequesting } from "src/common/decorators/require-scree
 @Controller("/units")
 export class UnitHierarchyController {
   constructor(private readonly service: UnitHierarchyService) { }
+
+  @Get("combobox")
+  async searchUnitsCombobox(
+    @Req() request: Request,
+    @Query("filter") filter = "",
+    @Query("currentLevel") currentLevel?: string,
+    @Query("parentUnitId") parentUnitId?: string,
+  ) {
+    return this.service.searchUnitsCombobox(request?.["date"], {
+      filter,
+      currentLevel: Number(currentLevel),
+      parentUnitId: parentUnitId === undefined ? undefined : Number(parentUnitId),
+    });
+  }
 
   @Get("")
   async getAllUnits(@Req() request: Request) {

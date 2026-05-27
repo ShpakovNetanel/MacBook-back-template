@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { isDefined } from "remeda";
-import { Op, Transaction } from "sequelize";
+import { Op, Sequelize, Transaction } from "sequelize";
 import { OBJECT_TYPES, UNIT_RELATION_TYPES } from "../../../../constants";
 import { UnitId } from "../../unit-id/unit-id.model";
 import { UnitRelation } from "../../unit-relations/unit-relation.model";
@@ -128,6 +128,65 @@ export class UnitHierarchyRepository {
         objectType: OBJECT_TYPES.UNIT,
       },
       order: [["startDate", "DESC"]],
+    });
+  }
+
+  fetchActiveUnitDetailsByIds(date: string, unitIds: number[]) {
+    if (unitIds.length === 0) return Promise.resolve([]);
+
+    return this.unitDetailModel.findAll({
+      attributes: ["unitId", "description", "tsavIrgunCodeId", "unitLevelId"],
+      where: {
+        unitId: { [Op.in]: unitIds },
+        startDate: { [Op.lte]: date },
+        endDate: { [Op.gt]: date },
+        objectType: OBJECT_TYPES.UNIT,
+      },
+      order: [["startDate", "DESC"]],
+    });
+  }
+
+  fetchActiveUnitDetailsBySearch(
+    date: string,
+    {
+      filter = "",
+      currentLevel,
+      limit,
+    }: {
+      filter?: string;
+      currentLevel: number;
+      limit: number;
+    },
+  ) {
+    const normalizedFilter = filter.trim();
+    const where = {
+      startDate: { [Op.lte]: date },
+      endDate: { [Op.gt]: date },
+      objectType: OBJECT_TYPES.UNIT,
+      unitLevelId: { [Op.gt]: currentLevel },
+      ...(normalizedFilter
+        ? {
+            [Op.or]: [
+              { description: { [Op.iLike]: `%${normalizedFilter}%` } },
+              { tsavIrgunCodeId: { [Op.iLike]: `%${normalizedFilter}%` } },
+              Sequelize.where(
+                Sequelize.cast(Sequelize.col("unit_id"), "TEXT"),
+                { [Op.iLike]: `%${normalizedFilter}%` },
+              ),
+            ],
+          }
+        : {}),
+    };
+
+    return this.unitDetailModel.findAll({
+      attributes: ["unitId", "description", "tsavIrgunCodeId", "unitLevelId"],
+      where,
+      order: [
+        ["unitLevelId", "ASC"],
+        ["unitId", "ASC"],
+        ["startDate", "DESC"],
+      ],
+      limit,
     });
   }
 
