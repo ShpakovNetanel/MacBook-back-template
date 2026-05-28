@@ -420,3 +420,15 @@ CREATE INDEX IF NOT EXISTS logs_application_log_type_occurred_at_idx
   ON shoval.logs (application, type, occurred_at DESC);
 
 CREATE UNIQUE INDEX reports_unique ON shoval.reports USING btree (created_on, recipient_unit_id, unit_id, report_type_id);
+
+CREATE INDEX IF NOT EXISTS units_id_idx ON shoval.units USING btree (unit_id);
+
+CREATE INDEX IF NOT EXISTS materials_id_idx ON shoval.materials USING btree (id);
+
+CREATE INDEX IF NOT EXISTS users_id_idx ON shoval.users USING btree (id);
+
+CREATE INDEX IF NOT EXISTS units_relations_unit_id_idx ON shoval.units_relations USING btree (unit_id);
+
+CREATE INDEX IF NOT EXISTS units_relations_related_unit_id_idx ON shoval.units_relations USING btree (related_unit_id);
+
+CREATE INDEX IF NOT EXISTS units_statuses_date_idx ON shoval.units_statuses USING btree (date);

@@ -2,8 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Op } from "sequelize";
 import { Transaction } from "sequelize";
-import { OBJECT_TYPES, UNIT_RELATION_TYPES } from "../../../constants";
+import { OBJECT_TYPES, REPORT_TYPES, UNIT_LEVELS, UNIT_RELATION_TYPES } from "../../../constants";
+import { Report } from "../../report-entities/report/report.model";
 import { UnitRelation } from "../unit-relations/unit-relation.model";
+import { Unit } from "../unit/unit.model";
 import { IUnitStatus, UnitStatus } from "./units-statuses.model";
 
 @Injectable()
@@ -11,6 +13,8 @@ export class UnitStatusRepository {
     constructor(
         @InjectModel(UnitStatus) private readonly unitStatusModel: typeof UnitStatus,
         @InjectModel(UnitRelation) private readonly unitRelationModel: typeof UnitRelation,
+        @InjectModel(Unit) private readonly unitModel: typeof Unit,
+        @InjectModel(Report) private readonly reportModel: typeof Report,
     ) { }
 
     async fetchHierarchyUnitIds(date: string, unitIds: number[], transaction?: Transaction) {
@@ -57,6 +61,40 @@ export class UnitStatusRepository {
             updateOnDuplicate: ['unitStatusId'],
             transaction
         })
+    }
+
+    async fetchNonGdudUnitIds(date: string, unitIds: number[], transaction?: Transaction) {
+        if (unitIds.length === 0) return [];
+
+        const units = await this.unitModel.findAll({
+            attributes: ["unitId"],
+            where: {
+                unitId: { [Op.in]: unitIds },
+                unitLevelId: { [Op.ne]: UNIT_LEVELS.GDUD },
+                objectType: OBJECT_TYPES.UNIT,
+                startDate: { [Op.lte]: date },
+                endDate: { [Op.gt]: date },
+            },
+            transaction,
+        });
+
+        return Array.from(new Set(units.map(unit => unit.unitId)));
+    }
+
+    deleteUsageInventoryReportsForUnitsDate(unitIds: number[], date: string, transaction: Transaction) {
+        if (unitIds.length === 0) return Promise.resolve(0);
+
+        return this.reportModel.destroy({
+            where: {
+                unitId: { [Op.in]: unitIds },
+                unitObjectType: OBJECT_TYPES.UNIT,
+                recipientUnitObjectType: OBJECT_TYPES.UNIT,
+                reporterUnitObjectType: OBJECT_TYPES.UNIT,
+                reportTypeId: { [Op.in]: [REPORT_TYPES.USAGE, REPORT_TYPES.INVENTORY] },
+                createdOn: date,
+            },
+            transaction,
+        });
     }
 
     clearStatusesForUnitsDate(unitIds: number[], date: string, transaction: Transaction) {

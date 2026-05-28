@@ -5,9 +5,11 @@ import { UnitStatusController } from "./units-statuses.controller";
 import { UnitStatusService } from "./units-statuses.service";
 import { UnitStatusRepository } from "./units-statuses.repository";
 import { UnitRelation } from "../unit-relations/unit-relation.model";
+import { Unit } from "../unit/unit.model";
+import { Report } from "../../report-entities/report/report.model";
 
 @Module({
-    imports: [SequelizeModule.forFeature([UnitStatus, UnitRelation])],
+    imports: [SequelizeModule.forFeature([UnitStatus, UnitRelation, Unit, Report])],
     controllers: [UnitStatusController],
     providers: [UnitStatusService, UnitStatusRepository],
     exports: [UnitStatusService, UnitStatusRepository]

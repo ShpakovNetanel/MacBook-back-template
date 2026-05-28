@@ -303,7 +303,7 @@ export class ReportService {
 
             const dbReports = await this.repository.fetchReportsDataForUnits(
                 date,
-                connectedUnitIds
+                connectedUnitIds,
             );
 
             const reportsToSave = await getAggregatedReports({

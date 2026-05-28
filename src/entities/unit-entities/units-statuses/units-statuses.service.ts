@@ -4,6 +4,7 @@ import { Transaction } from "sequelize";
 import { Sequelize } from "sequelize-typescript";
 import { UnitStatusRepository } from "./units-statuses.repository";
 import { UpdateUnitStatus } from "./DTO/updateUnitStatus";
+import { UNIT_STATUSES } from "../../../constants";
 
 @Injectable()
 export class UnitStatusService {
@@ -40,6 +41,11 @@ export class UnitStatusService {
         const targetUnitIds = unitsStatuses.updateHierarchy
             ? hierarchyUnitIds
             : unitsStatuses.unitsIds;
+
+        if (unitsStatuses.statusId === UNIT_STATUSES.REQUESTING) {
+            const reportUnitIds = await this.repository.fetchNonGdudUnitIds(date, targetUnitIds, transaction);
+            await this.repository.deleteUsageInventoryReportsForUnitsDate(reportUnitIds, date, transaction);
+        }
 
         if (unitsStatuses.clearHierarchyStatuses) {
             return this.repository.clearStatusesForUnitsDate(targetUnitIds, date, transaction);
