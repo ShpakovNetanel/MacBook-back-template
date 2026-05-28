@@ -13,12 +13,13 @@ import { UserRepository } from 'src/entities/unit-entities/users/user.repository
 import { UnitStatus } from 'src/entities/unit-entities/units-statuses/units-statuses.model';
 import { UnitRelation } from 'src/entities/unit-entities/unit-relations/unit-relation.model';
 import { Report } from 'src/entities/report-entities/report/report.model';
+import { ReportItem } from 'src/entities/report-entities/report-item/report-item.model';
 import { User } from 'src/entities/unit-entities/users/user.model';
 import { MaterialStandardGroupRepository } from 'src/entities/standard-entities/material-standard-group/material-standard-group.repository';
 import { MaterialStandardGroup } from 'src/entities/standard-entities/material-standard-group/material-standard-group.model';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Unit, Stock, UnitStatus, UnitRelation, Report, User, MaterialStandardGroup])],
+  imports: [SequelizeModule.forFeature([Unit, Stock, UnitStatus, UnitRelation, Report, ReportItem, User, MaterialStandardGroup])],
   controllers: [StockController],
   providers: [
     UnitHierarchyService,

@@ -5,7 +5,7 @@ const buildService = () => {
     const repository = {
         fetchHierarchyUnitIds: jest.fn(),
         fetchNonGdudUnitIds: jest.fn(),
-        deleteUsageInventoryReportsForUnitsDate: jest.fn(),
+        inactivateUsageInventoryReportItemsForUnitsDate: jest.fn(),
         clearStatusesForUnitsDate: jest.fn(),
         updateStatuses: jest.fn(),
     };
@@ -22,7 +22,7 @@ const buildService = () => {
 };
 
 describe("UnitStatusService", () => {
-    it("deletes usage and inventory reports for non-gdud units when unlocking", async () => {
+    it("inactivates usage and inventory report items for non-gdud units when unlocking", async () => {
         const { repository, service, transaction } = buildService();
         repository.fetchHierarchyUnitIds.mockResolvedValue([10, 11, 12]);
         repository.fetchNonGdudUnitIds.mockResolvedValue([10, 11]);
@@ -38,7 +38,7 @@ describe("UnitStatusService", () => {
             [10, 11, 12],
             transaction
         );
-        expect(repository.deleteUsageInventoryReportsForUnitsDate).toHaveBeenCalledWith(
+        expect(repository.inactivateUsageInventoryReportItemsForUnitsDate).toHaveBeenCalledWith(
             [10, 11],
             "2026-04-23",
             transaction
@@ -50,7 +50,7 @@ describe("UnitStatusService", () => {
         ], transaction);
     });
 
-    it("does not delete reports when locking units", async () => {
+    it("does not inactivate report items when locking units", async () => {
         const { repository, service, transaction } = buildService();
         repository.fetchHierarchyUnitIds.mockResolvedValue([10]);
 
@@ -61,7 +61,7 @@ describe("UnitStatusService", () => {
         }, "2026-04-23", transaction);
 
         expect(repository.fetchNonGdudUnitIds).not.toHaveBeenCalled();
-        expect(repository.deleteUsageInventoryReportsForUnitsDate).not.toHaveBeenCalled();
+        expect(repository.inactivateUsageInventoryReportItemsForUnitsDate).not.toHaveBeenCalled();
         expect(repository.updateStatuses).toHaveBeenCalledWith([
             { unitId: 10, unitStatusId: UNIT_STATUSES.WAITING_FOR_ALLOCATION, date: new Date("2026-04-23") },
         ], transaction);

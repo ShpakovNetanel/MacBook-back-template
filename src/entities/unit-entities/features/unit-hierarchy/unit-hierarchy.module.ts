@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { SequelizeModule } from "@nestjs/sequelize";
+import { ReportItem } from "../../../report-entities/report-item/report-item.model";
 import { ReportRoutingRepository } from "../../../report-entities/report/report-routing.repository";
 import { Report } from "../../../report-entities/report/report.model";
 import { UnitId } from "../../unit-id/unit-id.model";
@@ -22,6 +23,7 @@ import { UnitUserModule } from "../../users/user.module";
       UnitStatusType,
       UnitStatus,
       Report,
+      ReportItem,
     ]),
     UnitUserModule
   ],

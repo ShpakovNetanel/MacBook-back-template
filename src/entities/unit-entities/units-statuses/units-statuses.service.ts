@@ -44,7 +44,7 @@ export class UnitStatusService {
 
         if (unitsStatuses.statusId === UNIT_STATUSES.REQUESTING) {
             const reportUnitIds = await this.repository.fetchNonGdudUnitIds(date, targetUnitIds, transaction);
-            await this.repository.deleteUsageInventoryReportsForUnitsDate(reportUnitIds, date, transaction);
+            await this.repository.inactivateUsageInventoryReportItemsForUnitsDate(reportUnitIds, date, transaction);
         }
 
         if (unitsStatuses.clearHierarchyStatuses) {

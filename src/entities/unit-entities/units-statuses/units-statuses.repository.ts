@@ -2,7 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
 import { Op } from "sequelize";
 import { Transaction } from "sequelize";
-import { OBJECT_TYPES, REPORT_TYPES, UNIT_LEVELS, UNIT_RELATION_TYPES } from "../../../constants";
+import { OBJECT_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_LEVELS, UNIT_RELATION_TYPES } from "../../../constants";
+import { ReportItem } from "../../report-entities/report-item/report-item.model";
 import { Report } from "../../report-entities/report/report.model";
 import { UnitRelation } from "../unit-relations/unit-relation.model";
 import { Unit } from "../unit/unit.model";
@@ -15,6 +16,7 @@ export class UnitStatusRepository {
         @InjectModel(UnitRelation) private readonly unitRelationModel: typeof UnitRelation,
         @InjectModel(Unit) private readonly unitModel: typeof Unit,
         @InjectModel(Report) private readonly reportModel: typeof Report,
+        @InjectModel(ReportItem) private readonly reportItemModel: typeof ReportItem,
     ) { }
 
     async fetchHierarchyUnitIds(date: string, unitIds: number[], transaction?: Transaction) {
@@ -81,10 +83,11 @@ export class UnitStatusRepository {
         return Array.from(new Set(units.map(unit => unit.unitId)));
     }
 
-    deleteUsageInventoryReportsForUnitsDate(unitIds: number[], date: string, transaction: Transaction) {
+    async inactivateUsageInventoryReportItemsForUnitsDate(unitIds: number[], date: string, transaction: Transaction) {
         if (unitIds.length === 0) return Promise.resolve(0);
 
-        return this.reportModel.destroy({
+        const reports = await this.reportModel.findAll({
+            attributes: ["id"],
             where: {
                 unitId: { [Op.in]: unitIds },
                 unitObjectType: OBJECT_TYPES.UNIT,
@@ -95,6 +98,21 @@ export class UnitStatusRepository {
             },
             transaction,
         });
+
+        const reportIds = Array.from(new Set(reports.map(report => report.id)));
+        if (reportIds.length === 0) return 0;
+
+        const [updatedCount] = await this.reportItemModel.update(
+            { status: RECORD_STATUS.INACTIVE },
+            {
+                where: {
+                    reportId: { [Op.in]: reportIds },
+                },
+                transaction,
+            }
+        );
+
+        return updatedCount;
     }
 
     clearStatusesForUnitsDate(unitIds: number[], date: string, transaction: Transaction) {
