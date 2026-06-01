@@ -134,10 +134,12 @@ export const calculateStandardsForUnit = (
     unitInfoByUnitId: Map<number, UnitInfo>,
     unitTagsByUnit: Map<number, Map<number, string>>,
     groupToMaterialMap: Map<string, string[]>,
+    directChildId?: number,
 ): CalculatedUnitStandard[] => {
     const results: CalculatedUnitStandard[] = [];
     const unitChildren = childUnitIdsByParentUnitId.get(unitId) ?? [];
     const unitLevel = unitInfoByUnitId.get(unitId)?.level ?? 0;
+    const resolvedDirectChildId = directChildId ?? unitId;
 
     for (const standard of relevantStandards) {
         const { lowestLevel } = standard;
@@ -165,6 +167,7 @@ export const calculateStandardsForUnit = (
             results.push({
                 unitId,
                 unitDescription,
+                directChildId: resolvedDirectChildId,
                 standardId: standard.standardId,
                 managingUnit: standard.managingUnit,
                 itemGroupId: standard.itemGroupId,
@@ -191,6 +194,7 @@ export const calculateStandardsForUnit = (
                     unitInfoByUnitId,
                     unitTagsByUnit,
                     groupToMaterialMap,
+                    resolvedDirectChildId,
                 );
                 results.push(...childStandardResults);
             }
@@ -208,7 +212,9 @@ export const buildStandardResponse = (
     allGroupNames: Map<string, string>,
     groupToMaterialMap: Map<string, string[]>,
     liveDataByUnit: Map<number, Map<string, LiveMaterialData>>,
+    directChildUnitIds: number[] = [],
 ): StandardResponse => {
+    const directChildSet = new Set(directChildUnitIds);
     const groupedStandards = new Map<string, {
         managingUnit: UnitDto;
         materialCategory: StandardMaterialCategory;
@@ -249,18 +255,26 @@ export const buildStandardResponse = (
 
             const childStandardByUnitId = new Map<number, ChildStandard>();
             for (const entry of entries) {
+                const lookupUnitId = directChildSet.size > 0 ? entry.directChildId : entry.unitId;
                 const requisitionQuantity = sumMaterialGroupQuantity(
-                    liveDataByUnit.get(entry.unitId) ?? new Map(),
+                    liveDataByUnit.get(lookupUnitId) ?? new Map(),
                     materialGroupId,
                     groupToMaterialMap,
                     "requisitionQuantity"
                 );
 
                 if (!childStandardByUnitId.has(entry.unitId)) {
+                    const stockLookupUnitId = directChildSet.size > 0 ? entry.directChildId : entry.unitId;
+                    const stockQuantity = sumMaterialGroupQuantity(
+                        liveDataByUnit.get(stockLookupUnitId) ?? new Map(),
+                        materialGroupId,
+                        groupToMaterialMap,
+                        "stockQuantity"
+                    );
                     childStandardByUnitId.set(entry.unitId, {
                         unit: buildStandardUnitDto(entry.unitId, unitInfoByUnitId),
                         standardQuantity: 0,
-                        stockQuantity: entry.stockQuantity,
+                        stockQuantity,
                         requisitionQuantity,
                         origins: [],
                     });
@@ -268,7 +282,6 @@ export const buildStandardResponse = (
 
                 const childStandard = childStandardByUnitId.get(entry.unitId)!;
                 childStandard.standardQuantity += entry.standardQuantity;
-                childStandard.stockQuantity = entry.stockQuantity;
                 childStandard.requisitionQuantity = requisitionQuantity;
                 childStandard.origins.push(...entry.origins);
             }

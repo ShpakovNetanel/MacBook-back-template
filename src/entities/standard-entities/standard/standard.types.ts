@@ -74,6 +74,7 @@ export type RelevantStandardValue = {
 export type CalculatedUnitStandard = {
     unitId: number;
     unitDescription: string;
+    directChildId: number;
     standardId: number;
     managingUnit: number;
     itemGroupId: string;

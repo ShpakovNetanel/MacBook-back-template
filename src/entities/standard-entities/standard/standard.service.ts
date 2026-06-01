@@ -85,6 +85,11 @@ export class StandardService {
         const reports = await this.reportRepository.fetchReportsDataForUnits(date, unitIdsForReportData);
         const liveMaterialDataByUnitId = buildLiveMaterialDataByUnitId(reports);
 
+        // For requisition/stock in the standard response, only use direct children's reports
+        const directChildReportUnitIds = new Set([screenUnitId, ...eligibleDirectChildUnitIds]);
+        const directChildReports = reports.filter(r => directChildReportUnitIds.has(r.unitId));
+        const directChildLiveData = buildLiveMaterialDataByUnitId(directChildReports);
+
         const allGroupIds = await this.standardRepository.getAllItemGroupIds();
         const allStandards = await this.standardRepository.getStandardsForItemGroups(allGroupIds);
         const standardsManagedByScreenPath = allStandards.filter(standard => unitsAllowedToManageStandards.has(standard.managingUnit));
@@ -118,7 +123,8 @@ export class StandardService {
             allMaterials,
             allGroupNames,
             groupToMaterialMap,
-            liveMaterialDataByUnitId,
+            directChildLiveData,
+            eligibleDirectChildUnitIds,
         );
     }
 }
