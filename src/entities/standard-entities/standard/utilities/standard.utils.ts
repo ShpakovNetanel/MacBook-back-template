@@ -1,4 +1,4 @@
-import { MATERIAL_TYPES, REPORT_TYPES, UNIT_STATUSES } from "src/constants";
+import { MATERIAL_TYPES, RECORD_STATUS, REPORT_TYPES, UNIT_STATUSES } from "src/constants";
 import { MaterialDto, UnitDto, UnitStatusDto } from "src/entities/report-entities/report/report.types";
 import { Report } from "src/entities/report-entities/report/report.model";
 import {
@@ -281,7 +281,7 @@ export const buildStandardResponse = (
             if (totalStandardQuantity >= 0) {
                 materialsGroups.push({
                     materialGroup,
-                    materialIds: groupToMaterialMap.get(materialGroupId) ?? [],
+                    materialIds: (groupToMaterialMap.get(materialGroupId) ?? []).filter(id => id !== materialGroupId),
                     toolMaterialIds,
                     standards: [{
                         totalStandardQuantity,
@@ -316,6 +316,7 @@ export const buildLiveMaterialDataByUnitId = (reports: Report[]): Map<number, Ma
 
         for (const item of (report.items ?? [])) {
             if (!item.materialId) continue;
+            if (item.status === RECORD_STATUS.INACTIVE) continue;
             const existing = unitData.get(item.materialId) ?? { stockQuantity: 0, requisitionQuantity: 0 };
             const reportedQuantity = parseQuantityValue(item.confirmedQuantity ?? item.reportedQuantity);
 
@@ -340,6 +341,7 @@ export const sumMaterialGroupQuantity = (
     const groupEntry = unitLiveData.get(groupId);
     const groupQuantity = groupEntry ? parseQuantityValue(groupEntry[field]) : 0;
     const individualMaterialQuantity = (groupToMaterialMap.get(groupId) ?? [])
+        .filter(materialId => materialId !== groupId)
         .reduce((total, materialId) => total + parseQuantityValue(unitLiveData.get(materialId)?.[field]), 0);
     return groupQuantity + individualMaterialQuantity;
 };
