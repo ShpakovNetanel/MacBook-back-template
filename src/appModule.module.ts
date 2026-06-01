@@ -18,7 +18,16 @@ const sequelizeInitializer = (configService: ConfigService) =>
         : {
             host: configService.get<string>('DB_HOST'),
             username: configService.get<string>('DB_USER'),
-            database: configService.get<string>('DB_NAME')
+            database: configService.get<string>('DB_NAME'),
+            dialectOptions: {
+                ssl: {
+                    require: true,
+                    rejectUnauthorized: true,
+                    ca: configService.get<string>('CERTIFICATE_CA'),
+                    key: configService.get<string>('CERTIFICATE_KEY'),
+                    cert: configService.get<string>('CERTIFICATE_CSR'),
+                }
+            }
         }
 
 @Module({
