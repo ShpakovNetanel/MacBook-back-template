@@ -213,6 +213,8 @@ export const buildStandardResponse = (
     groupToMaterialMap: Map<string, string[]>,
     liveDataByUnit: Map<number, Map<string, LiveMaterialData>>,
     directChildUnitIds: number[] = [],
+    inactiveMaterialsByUnitId: Map<number, Set<string>> = new Map(),
+    fullLiveDataByUnit: Map<number, Map<string, LiveMaterialData>> = liveDataByUnit,
 ): StandardResponse => {
     const directChildSet = new Set(directChildUnitIds);
     const groupedStandards = new Map<string, {
@@ -263,14 +265,21 @@ export const buildStandardResponse = (
                     "requisitionQuantity"
                 );
 
+                // Stock: use entry's leaf data but exclude materials inactive at direct child
+                const inactiveAtDirectChild = inactiveMaterialsByUnitId.get(entry.directChildId);
+                let stockQuantity: number;
+                if (inactiveAtDirectChild && inactiveAtDirectChild.size > 0) {
+                    const unitLiveData = fullLiveDataByUnit.get(entry.unitId) ?? new Map();
+                    const allIds = [materialGroupId, ...(groupToMaterialMap.get(materialGroupId) ?? [])];
+                    stockQuantity = allIds
+                        .filter((id, i, arr) => id !== arr[i - 1] || i === 0)
+                        .filter(id => !inactiveAtDirectChild.has(id))
+                        .reduce((total, id) => total + parseQuantityValue(unitLiveData.get(id)?.stockQuantity), 0);
+                } else {
+                    stockQuantity = entry.stockQuantity;
+                }
+
                 if (!childStandardByUnitId.has(entry.unitId)) {
-                    const stockLookupUnitId = directChildSet.size > 0 ? entry.directChildId : entry.unitId;
-                    const stockQuantity = sumMaterialGroupQuantity(
-                        liveDataByUnit.get(stockLookupUnitId) ?? new Map(),
-                        materialGroupId,
-                        groupToMaterialMap,
-                        "stockQuantity"
-                    );
                     childStandardByUnitId.set(entry.unitId, {
                         unit: buildStandardUnitDto(entry.unitId, unitInfoByUnitId),
                         standardQuantity: 0,
@@ -282,6 +291,7 @@ export const buildStandardResponse = (
 
                 const childStandard = childStandardByUnitId.get(entry.unitId)!;
                 childStandard.standardQuantity += entry.standardQuantity;
+                childStandard.stockQuantity = stockQuantity;
                 childStandard.requisitionQuantity = requisitionQuantity;
                 childStandard.origins.push(...entry.origins);
             }

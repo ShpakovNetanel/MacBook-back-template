@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ReportRepository } from "src/entities/report-entities/report/report.repository";
 import { UnitHierarchyService } from "src/entities/unit-entities/features/unit-hierarchy/unit-hierarchy.service";
+import { RECORD_STATUS, REPORT_TYPES } from "src/constants";
 import { CalculatedUnitStandard, StandardResponse } from "./standard.types";
 import { StandardRepository } from "./standard.repository";
 import {
@@ -90,6 +91,24 @@ export class StandardService {
         const directChildReports = reports.filter(r => directChildReportUnitIds.has(r.unitId));
         const directChildLiveData = buildLiveMaterialDataByUnitId(directChildReports);
 
+        // Fetch INACTIVE items at direct children to know which materials were deleted
+        const inactiveDirectChildReports = await this.reportRepository.fetchReportsByScope({
+            date,
+            reportingUnitIds: eligibleDirectChildUnitIds,
+            reportTypeIds: [REPORT_TYPES.REQUEST, REPORT_TYPES.INVENTORY, REPORT_TYPES.USAGE],
+            itemStatuses: [RECORD_STATUS.INACTIVE],
+        });
+        const inactiveMaterialsByUnitId = new Map<number, Set<string>>();
+        for (const report of inactiveDirectChildReports) {
+            for (const item of report.items ?? []) {
+                if (!item.materialId) continue;
+                if (!inactiveMaterialsByUnitId.has(report.unitId)) {
+                    inactiveMaterialsByUnitId.set(report.unitId, new Set());
+                }
+                inactiveMaterialsByUnitId.get(report.unitId)!.add(item.materialId);
+            }
+        }
+
         const allGroupIds = await this.standardRepository.getAllItemGroupIds();
         const allStandards = await this.standardRepository.getStandardsForItemGroups(allGroupIds);
         const standardsManagedByScreenPath = allStandards.filter(standard => unitsAllowedToManageStandards.has(standard.managingUnit));
@@ -125,6 +144,8 @@ export class StandardService {
             groupToMaterialMap,
             directChildLiveData,
             eligibleDirectChildUnitIds,
+            inactiveMaterialsByUnitId,
+            liveMaterialDataByUnitId,
         );
     }
 }
